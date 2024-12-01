@@ -176,11 +176,6 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 		// @ fold acc(sl.Bytes(sep, 0, len(sep)), R39)
 		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R39)
 
-		// @ assert InRangeInc(i, 0, len(s) - len(sep))
-		// @ assert len(s) + idx == len(olds)
-		// @ assert InRangeInc(idx+i, idx, len(olds) - len(sep))
-		// @ assert InRangeInc(idx+i, 0, len(olds) - len(sep))
-
 		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R39)
 		// @ unfold acc(sl.Bytes(sep, 0, len(sep)), R39)
 
@@ -949,9 +944,7 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ fold acc(sl.Bytes(b, 0, len(b)), R41)
 	// @ fold sl.Bytes(nb, 0, len(nb))
 
-	// @ assert View(nb)[:bp] == View(b)
 	// @ lemmaSpecRepeat_1(View(b))
-	// @ assert SpecRepeat(View(b), 1) == View(b)
 
 	// @ invariant 0 < count
 	// @ invariant 0 < i
@@ -962,21 +955,15 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ invariant View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
 	for bp < len(nb) {
 		// @ unfold sl.Bytes(nb, 0, len(nb))
-		// @ assert 0 <= bp && bp <= len(nb)
-		// @ assert bp == MinInt(count, i) * len(b)
 		// @ SubSliceOverlaps(nb, bp, len(nb))
 		// @ SubSliceOverlaps(nb, 0, bp)
 		copy(nb[bp:], nb[:bp] /* @, R40 @ */)
 		// @ fold sl.Bytes(nb, 0, len(nb))
 		// @ assume View(nb)[:i * len(b)] ++ View(nb)[:i * len(b)] == View(nb)[: MinInt(count, i*2) * len(b)]
 		// @ lemmaSpecRepeat_2n(View(b), i)
-		// @ assert View(nb)[:i * len(b)] ++ View(nb)[:i * len(b)] == SpecRepeat(View(b), 2 * i)[: MinInt(count, i*2) * len(b)]
 		// @ lemmaEqTransitive_seq(View(nb)[: MinInt(count, i*2) * len(b)], View(nb)[:i * len(b)] ++ View(nb)[:i * len(b)], View(nb)[: MinInt(count, i*2) * len(b)])
-		// @ assert View(nb)[: MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), 2 * i)[: MinInt(count, i*2) * len(b)]
 		// @ vb := View(b)
 		// @ vnb := View(nb)
-		// @ assert 0 < count
-		// @ assert sl.Bytes(nb, 0, len(nb))
 
 		// @ decreases
 		// @ requires acc(sl.Bytes(b, 0, len(b)), R50)
@@ -994,17 +981,8 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ outline (
 		// @ lemmaMul2Inj(bp, i, bp*2, i*2, len(b))
 		bp *= 2
-		// @ assert View(nb)[:MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), MinInt(count, i*2))
 		// @ i *= 2
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
 		// @ )
-		// @ assert 0 < i
-		// @ assert bp == len(b) * i
-		// @ assert bp >= 0
-		// @ assert sl.Bytes(nb, 0, len(nb))
-		// @ assert vnb == View(nb)
-		// @ assert vb == View(b)
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
 	}
 	return nb
 }
@@ -2144,7 +2122,6 @@ func Index(s, sep []byte) (res int) {
 				// @ assume forall j int :: {View(s)[i+1:t][j]} 0 <= j && j < o ==> View(s)[i+1:t][j] != c0
 
 				if o < 0 {
-					// @ assert forall j int :: {View(s[i+1:t])[j]} 0 <= j && j < len(s[i+1:t]) ==> View(s[i+1:t])[j] != c0
 					// @ assume forall j int :: {View(s)[i+1:t][j]} 0 <= j && j < len(s[i+1:t]) ==> View(s)[i+1:t][j] != c0
 					// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 					// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2157,9 +2134,7 @@ func Index(s, sep []byte) (res int) {
 
 				i += o + 1
 			}
-			// @ assert forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-			// @ assert acc(sl.Bytes(s, 0, len(s)), R40)
 
 			// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
 			// @ SubSliceOverlaps(s, i, i+n)
@@ -2171,16 +2146,12 @@ func Index(s, sep []byte) (res int) {
 			if p1 && Equal(s[i:i+n], sep) {
 				// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-				// @ assert vs == View(s)
 				//gobra:endrewrite 7bafdf7e4e13158c42c57d2807162d86acab287627cdfddb8689900171421936
-				// @ assert forall j int :: {View(s)[j:j+len(sep)]} 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
-				// @ assert forall j int :: {View(s)[j:j+len(sep)]} 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
 				return i
 			}
 			// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 			fails++
-			// @ assert forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
 			i++
 			// Switch to bytealg.Index when IndexByte produces too many false positives.
 			if fails > bytealg.Cutover(i) {
