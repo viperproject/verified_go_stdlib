@@ -1,0 +1,137 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package definitions
+
+// lemmas for working with disableNL
+
+ghost
+requires a == b
+ensures a * c == b * c
+ensures c * a == c * b
+decreases
+func LemmaMulReplace(a, b, c int) { }
+
+ghost
+requires a == b
+requires c == d * a
+ensures  c == d * b
+decreases
+func LemmaMulSubst1(a, b, c, d int) { }
+
+ghost
+requires a * 2 == a2
+requires b * 2 == b2
+requires a == c * b
+ensures a2 == c * b2
+decreases
+func LemmaMul2Inj(a, b, a2, b2, c int) {
+	assert a * 2 == (c * b) * 2
+	assert a * 2 == c * (b * 2)
+	assert a2 == c * (b * 2)
+	LemmaMulReplace(b*2, b2, c)
+	assert a2 == c * b2
+}
+
+// a <= b ==> a * c <= b * c
+ghost
+requires a <= b
+requires 0 <= c
+ensures a * c <= b * c
+decreases
+func LemmaMulInjLeq(a, b, c int) { }
+
+ghost
+requires a*c <= b*c
+requires 0 < c
+ensures a <= b
+decreases
+func LemmaMulInjLeqInv(a, b, c int) { }
+
+ghost
+requires c * a < c * b
+requires 0 < c
+ensures a < b
+decreases
+func LemmaMulInjLtLeftInv(a, b, c int) {  }
+
+ghost
+requires a == b
+ensures a*c == b*c
+decreases
+func LemmaMulInjEq(a, b, c int) { }
+
+ghost
+requires a >= 0
+requires b >= 0
+ensures a*b >= 0
+decreases a
+func LemmaMulPos(a, b int) {
+	switch {
+		case a == 0:
+			assert a*b == 0
+		default:
+			assert a*b == (a-1)*b + b
+			LemmaMulPos(a-1, b)
+	}
+}
+
+ghost
+requires a <= b
+requires b <= c
+ensures a <= c
+decreases
+func LemmaLeqTransitive(a, b, c int) { }
+
+ghost
+requires a == b
+requires b == c
+ensures a == c
+decreases
+func LemmaEqTransitive_seq(a, b, c seq[byte]) { }
+
+ghost
+requires a == b
+requires b == c
+ensures  a == c
+decreases
+func LemmaEqTransitive_int(a, b, c int) { }
+
+ghost
+ensures a * b == b * a
+decreases
+func LemmaMulComm(a, b int) { }
+
+ghost
+requires a == b
+ensures b == a
+decreases
+func LemmaEqSymmetric_int(a, b int) { }
+
+ghost
+requires 0 <= a
+requires 0 < b
+ensures a <= a * b
+decreases b
+func LemmaMulPositive(a, b int) {
+	if b == 1 {
+		assert a * b == a
+	} else {
+		assert a * b == a * (b - 1) + a
+		LemmaMulPositive(a, b-1)
+		assert a <= a * (b-1)+a
+	}
+}

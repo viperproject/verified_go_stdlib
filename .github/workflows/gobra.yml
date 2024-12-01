@@ -48,6 +48,16 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           statsFile: '/stats/stats_list.json'
+      - name: Verify package 'verification/utils/definitions'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'src/verification/utils/definitions'
+          timeout: 40m
+          headerOnly: ${{ env.headerOnly }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          statsFile: '/stats/stats_list.json'
       - name: Verify package 'bytes'
         uses: viperproject/gobra-action@main
         with:
@@ -58,6 +68,7 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           statsFile: '/stats/stats_list.json'
+          disableNL: true
       - name: Upload the verification report
         uses: actions/upload-artifact@v4
         with:
