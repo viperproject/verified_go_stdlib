@@ -176,3 +176,21 @@ decreases
 func lemmaIndexAdvance(s, sep seq[byte], a, b int) {
 
 }
+
+
+ghost
+requires InRangeInc(i, 0, len(s))
+requires InRangeInc(r, 0, len(s)-i)
+requires forall j int :: {s[i:][j:j+len(sep)]}{s[j]} 0 <= j && j < r ==> s[i:][j:j+len(sep)] != sep
+ensures  forall j int :: {s[j:j+len(sep)]} i <= j && j < r+i ==> s[j:j+len(sep)] != sep
+decreases
+func lemmaSliceSequence(s, sep seq[byte], i, r int) {
+	invariant forall j int :: {s[j:j+len(sep)]} i <= j && j < k ==> s[j:j+len(sep)] != sep
+	invariant InRangeInc(k, i, r+i)
+	decreases r+i-k
+	for k := i; k < r+i; k++ {
+		assert s[k] == s[i:][k-i]
+		assert s[k:k+len(sep)] === s[i:][k-i:k-i+len(sep)]
+		assert s[k:k+len(sep)] != sep
+	}
+}

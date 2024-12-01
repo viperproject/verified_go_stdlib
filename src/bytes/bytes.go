@@ -2166,7 +2166,7 @@ func Index(s, sep []byte) (res int) {
 				if r >= 0 {
 
 					// @ assert forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> View(s)[i:][j:j+len(sep)] != View(sep)
-					// @ assume forall j int :: {View(s)[j:j+len(sep)]} i <= j && j < r+i ==> View(s)[j:j+len(sep)] != View(sep)
+					// @ lemmaSliceSequence(View(s), View(sep), i, r)
 
 					// @ assert forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
 					// # assert forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
