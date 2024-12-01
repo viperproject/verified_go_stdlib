@@ -2160,7 +2160,7 @@ func Index(s, sep []byte) (res int) {
 				// @ fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				r := bytealg.Index(s[i:], sep)
 				// @ assert r != -1 ==> forall j int :: {View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> View(s[i:])[j:j+len(sep)] != View(sep)
-				// @ assume r != -1 ==> forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> View(s)[i:][j:j+len(sep)] != View(sep)
+				// @ ghost if r != -1 { lemmaViewSliceSepEquals(s, View(sep), i, r) }
 				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 				if r >= 0 {

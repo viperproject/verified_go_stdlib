@@ -194,3 +194,34 @@ func lemmaSliceSequence(s, sep seq[byte], i, r int) {
 		assert s[k:k+len(sep)] != sep
 	}
 }
+
+
+ghost
+requires InRangeInc(i, 0, len(s))
+requires InRangeInc(r, 0, len(s)-i)
+requires acc(sl.Bytes(s, 0, len(s)), R50)
+requires acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
+requires forall j int :: {View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> View(s[i:])[j:j+len(sep)] != sep
+ensures acc(sl.Bytes(s, 0, len(s)), R50)
+ensures acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
+ensures forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> View(s)[i:][j:j+len(sep)] != sep
+decreases
+func lemmaViewSliceSepEquals(s []byte, sep seq[byte], i, r int) {
+	invariant InRangeInc(k, 0, r)
+	invariant acc(sl.Bytes(s, 0, len(s)), R50)
+	invariant acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
+	invariant forall j int :: {View(s[i:])[j:j+len(sep)]}{s[j]} 0 <= j && j < r ==> View(s[i:])[j:j+len(sep)] != sep
+	invariant forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < k ==> View(s)[i:][j:j+len(sep)] != sep
+	decreases r-k
+	for k := 0; k < r; k++ {
+		unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R50/2)
+		unfold acc(sl.Bytes(s, 0, len(s)), R50/2)
+		SubSliceOverlaps(s, i, len(s))
+		assert View(s)[i:][k] == View(s[i:])[k]
+		assert View(s)[i:][k:k+len(sep)] == View(s[i:])[k:k+len(sep)]
+		assert View(s[i:])[k:k+len(sep)] != sep
+		assert View(s)[i:][k:k+len(sep)] != sep
+		fold acc(sl.Bytes(s, 0, len(s)), R50/2)
+		fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R50/2)
+	}
+}
