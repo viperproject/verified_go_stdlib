@@ -17,9 +17,9 @@ requires 0 < p
 requires acc(sl.Bytes(a, 0, len(a)), p)
 requires acc(sl.Bytes(b, 0, len(b)), p)
 requires r == ((unfolding acc(sl.Bytes(a, 0, len(a)), p) in string(a)) == (unfolding acc(sl.Bytes(b, 0, len(b)), p) in string(b)))
-ensures acc(sl.Bytes(a, 0, len(a)), p)
-ensures acc(sl.Bytes(b, 0, len(b)), p)
-ensures r == (sl.View(a) == sl.View(b))
+ensures  acc(sl.Bytes(a, 0, len(a)), p)
+ensures  acc(sl.Bytes(b, 0, len(b)), p)
+ensures  r == (sl.View(a) == sl.View(b))
 decreases
 func stringEqualsImplViewEquals(r bool, a, b []byte, p perm)
 
@@ -31,7 +31,7 @@ ghost
 requires InRangeInc(idx, 0, len(s))
 requires forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) ==> !(InRangeInc(j, 0, idx - len(sep))) || s[j:j+len(sep)] != sep || SetContainsInRange(indices, j-len(sep), j)
 requires forall j int :: {s[idx:][j:j+len(sep)]} InRangeInc(j, 0, len(s[idx:]) - len(sep)) ==> s[idx:][j:j+len(sep)] != sep
-ensures forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) ==> ( !InRangeInc(j, 0, len(s) - len(sep)) || s[j:j+len(sep)] != sep || SetContainsInRange(indices, j-len(sep), j))
+ensures  forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) ==> ( !InRangeInc(j, 0, len(s) - len(sep)) || s[j:j+len(sep)] != sep || SetContainsInRange(indices, j-len(sep), j))
 decreases
 func lemmaCountAux(s, sep seq[byte], indices set[int], idx int) {
 	assume forall j int :: {s[j:j+len(sep)]} InRangeInc(j, idx, len(s) - len(sep)) ==> s[j:j+len(sep)] != sep
@@ -53,13 +53,13 @@ func lemmaSpecRepeat_1(b seq[byte]) {
 
 ghost
 requires n >= 0
-ensures b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n) ++ b
+ensures  b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n) ++ b
 decreases
 func axiomSpecRepeatCommutative(b seq[byte], n int)
 
 ghost
 requires n >= 0
-ensures bytes.Repeat(b, 2 * n) == bytes.Repeat(b, n) ++ bytes.Repeat(b, n)
+ensures  bytes.Repeat(b, 2 * n) == bytes.Repeat(b, n) ++ bytes.Repeat(b, n)
 decreases n
 func lemmaSpecRepeat_2n(b seq[byte], n int) {
 	if n != 0 {
@@ -137,7 +137,7 @@ requires bp == nCopied ==> i*2 <= count
 requires bp + nCopied == len(nb) ==> count <= i*2
 requires bp == i * len(b)
 requires nb[:nCopied] == nb[bp:bp+nCopied]
-ensures (nb[:i * len(b)] ++ nb[:i * len(b)])[:count * len(b)] == nb[: MinInt(count, i*2) * len(b)]
+ensures  (nb[:i * len(b)] ++ nb[:i * len(b)])[:count * len(b)] == nb[: MinInt(count, i*2) * len(b)]
 decreases
 func lemmaDouble(nb seq[byte], b seq[byte], i, bp, count, nCopied int) {
 	if bp == nCopied {
@@ -167,7 +167,7 @@ func lemmaDouble(nb seq[byte], b seq[byte], i, bp, count, nCopied int) {
 
 ghost
 requires n >= 0
-ensures len(bytes.Repeat(s, n)) == len(s) * n
+ensures  len(bytes.Repeat(s, n)) == len(s) * n
 decreases n
 func lemmaSpecRepeatLength(s seq[byte], n int) {
 	switch {
@@ -182,14 +182,14 @@ func lemmaSpecRepeatLength(s seq[byte], n int) {
 
 ghost
 requires len(a) <= n
-ensures (a ++ b)[:n] == a ++ b[:n-len(a)]
+ensures  (a ++ b)[:n] == a ++ b[:n-len(a)]
 decreases
 func lemmaSliceSeqConcat(a, b seq[byte], n int) { }
 
 ghost
 requires 0 <= a
 requires 0 <= b
-ensures bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
+ensures  bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
 decreases b
 func lemmaSlicingSpecRepeat(s seq[byte], a, b int) {
 	r := bytes.Repeat(s, a)
@@ -294,9 +294,9 @@ requires InRangeInc(r, 0, len(s)-i)
 requires acc(sl.Bytes(s, 0, len(s)), R50)
 requires acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
 requires forall j int :: {sl.View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s[i:])[j:j+len(sep)] != sep
-ensures acc(sl.Bytes(s, 0, len(s)), R50)
-ensures acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
-ensures forall j int :: {sl.View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s)[i:][j:j+len(sep)] != sep
+ensures  acc(sl.Bytes(s, 0, len(s)), R50)
+ensures  acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
+ensures  forall j int :: {sl.View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s)[i:][j:j+len(sep)] != sep
 decreases
 func lemmaViewSliceSepEquals(s []byte, sep seq[byte], i, r int) {
 	invariant InRangeInc(k, 0, r)

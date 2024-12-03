@@ -20,8 +20,8 @@ package definitions
 
 ghost
 requires a == b
-ensures a * c == b * c
-ensures c * a == c * b
+ensures  a * c == b * c
+ensures  c * a == c * b
 decreases
 func LemmaMulReplace(a, b, c int) { }
 
@@ -36,7 +36,7 @@ ghost
 requires a * 2 == a2
 requires b * 2 == b2
 requires a == c * b
-ensures a2 == c * b2
+ensures  a2 == c * b2
 decreases
 func LemmaMul2Inj(a, b, a2, b2, c int) {
 	assert a * 2 == (c * b) * 2
@@ -50,34 +50,34 @@ func LemmaMul2Inj(a, b, a2, b2, c int) {
 ghost
 requires a <= b
 requires 0 <= c
-ensures a * c <= b * c
+ensures  a * c <= b * c
 decreases
 func LemmaMulInjLeq(a, b, c int) { }
 
 ghost
 requires a*c <= b*c
 requires 0 < c
-ensures a <= b
+ensures  a <= b
 decreases
 func LemmaMulInjLeqInv(a, b, c int) { }
 
 ghost
 requires c * a < c * b
 requires 0 < c
-ensures a < b
+ensures  a < b
 decreases
 func LemmaMulInjLtLeftInv(a, b, c int) {  }
 
 ghost
 requires a == b
-ensures a*c == b*c
+ensures  a*c == b*c
 decreases
 func LemmaMulInjEq(a, b, c int) { }
 
 ghost
 requires a >= 0
 requires b >= 0
-ensures a*b >= 0
+ensures  a*b >= 0
 decreases a
 func LemmaMulPos(a, b int) {
 	switch {
@@ -92,14 +92,14 @@ func LemmaMulPos(a, b int) {
 ghost
 requires a <= b
 requires b <= c
-ensures a <= c
+ensures  a <= c
 decreases
 func LemmaLeqTransitive(a, b, c int) { }
 
 ghost
 requires a == b
 requires b == c
-ensures a == c
+ensures  a == c
 decreases
 func LemmaEqTransitive_seq(a, b, c seq[byte]) { }
 
@@ -117,14 +117,14 @@ func LemmaMulComm(a, b int) { }
 
 ghost
 requires a == b
-ensures b == a
+ensures  b == a
 decreases
 func LemmaEqSymmetric_int(a, b int) { }
 
 ghost
 requires 0 <= a
 requires 0 < b
-ensures a <= a * b
+ensures  a <= a * b
 decreases b
 func LemmaMulPositive(a, b int) {
 	if b == 1 {

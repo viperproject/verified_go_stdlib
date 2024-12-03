@@ -2411,9 +2411,13 @@ func Index(s, sep []byte) (res int) {
 // @ preserves acc(sl.Bytes(sep, 0, len(sep)), R40)
 //
 // @ ensures found ==> len(b) + len(sep) + len(after) == len(s)
+//
 // @ ensures found ==> forall i int :: {&s[:len(b)][i]} 0 <= i && i < len(s[:len(b)]) ==> &s[:len(b)][i] == &b[i]
+//
 // @ ensures found ==> forall i int :: {&s[len(b)+len(sep):][i]} 0 <= i && i < len(s[len(b)+len(sep):]) ==> &s[len(b)+len(sep):][i] == &after[i]
+//
 // @ ensures !found ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i + len(sep) <= len(s) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
+//
 // @ ensures !found ==> len(s) == len(b) && (forall i int :: {&s[i]}{&b[i]} 0 <= i && i < len(s) ==> &s[i] == &b[i]) && after == nil
 //
 // @ decreases
