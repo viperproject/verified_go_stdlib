@@ -11,8 +11,8 @@ package bytes
 import (
 	// @	. "verification/utils/definitions"
 	// @	sl "gobra-libs/byteslice"
+	// @	rsl "gobra-libs/runeslice"
 	// @	b "verification/utils/bitwise"
-	// @	rsl "verification/utils/slices"
 	// #	seqs "gobra-libs/seqs"
 	// #	sets "gobra-libs/sets"
 	// @	. "bytes/spec"
@@ -1937,7 +1937,7 @@ func TrimSpace(s []byte) (res []byte) {
 //
 // @ ensures rsl.Runes(res, 0, len(res))
 //
-// @ ensures rsl.ViewRunes(res) == utf8.Codepoints(s)
+// @ ensures rsl.View(res) == utf8.Codepoints(s)
 //
 // @ decreases
 func Runes(s []byte) (res []rune) {
@@ -1962,7 +1962,7 @@ func Runes(s []byte) (res []rune) {
 	// @ invariant 0 <= i && i <= len(t)
 	// @ invariant i == len(t) - len(utf8.Codepoints(s))
 	// @ invariant len(s) > 0 ==> i < len(t)
-	// @ invariant rsl.ViewRunes(t)[:i] == codepoints[:i]
+	// @ invariant rsl.View(t)[:i] == codepoints[:i]
 	// @ decreases len(s)
 	for len(s) > 0 {
 		// @ unfold rsl.Runes(t, 0, len(t))
