@@ -16,6 +16,7 @@ import (
 	// #	seqs "gobra-libs/seqs"
 	// #	sets "gobra-libs/sets"
 	// @	. "bytes/spec"
+	// @	bytes "gobra-libs/bytes"
 	"internal/bytealg"
 	"unicode"
 	"unicode/utf8"
@@ -29,7 +30,7 @@ import (
 //
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R41)
 //
-// @ ensures res == ( View(a) == View(b) )
+// @ ensures res == ( sl.View(a) == sl.View(b) )
 //
 // @ decreases
 func Equal(a, b []byte) (res bool) {
@@ -96,11 +97,11 @@ func explode(s []byte, n int) (res [][]byte) {
 //
 // @ ensures len(indices) == res
 //
-// @ ensures len(sep) > 0  ==> forall i int :: { i in indices } (i in indices) ==> ( InRangeInc(i, 0, len(s) - len(sep)) && SubviewEq(View(s), View(sep), i) )
+// @ ensures len(sep) > 0  ==> forall i int :: { i in indices } (i in indices) ==> ( InRangeInc(i, 0, len(s) - len(sep)) && SubviewEq(sl.View(s), sl.View(sep), i) )
 //
 // @ ensures len(sep) > 0  ==> forall i, j int  :: { i in indices, j in indices }  (i in indices) && (j in indices) && i != j ==> (i + len(sep) <= j) || (j + len(sep) <= i)
 //
-// @ ensures len(sep) > 0  ==> forall i int :: { i in indices } !(i in indices) ==> ( !InRangeInc(i, 0, len(s) - len(sep)) || View(s)[i:i+len(sep)] != View(sep) || SetContainsInRange(indices, i-len(sep), i))
+// @ ensures len(sep) > 0  ==> forall i int :: { i in indices } !(i in indices) ==> ( !InRangeInc(i, 0, len(s) - len(sep)) || sl.View(s)[i:i+len(sep)] != sl.View(sep) || SetContainsInRange(indices, i-len(sep), i))
 //
 // @ ensures len(sep) == 0 ==> forall i int :: {i in indices} i in indices ==> 0 <= i && i <= len(s)
 //
@@ -122,7 +123,7 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 		//gobra:end-old-code 66239cff85d3bf25c4daa1d173a4c87733b57ef726a40dc7d98f63cf47ccdf38
 		res /* @ , indices @ */ = bytealg.Count(s,
 			/* @ unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in @ */ sep[0])
-		// @ assert forall i int :: { View(s)[i:i+len(sep)] } 0 <= i && i < len(s) ==> View(s)[i:i+len(sep)] == seq[byte]{View(s)[i]}
+		// @ assert forall i int :: { sl.View(s)[i:i+len(sep)] } 0 <= i && i < len(s) ==> sl.View(s)[i:i+len(sep)] == seq[byte]{sl.View(s)[i]}
 		return res // @ , indices
 		//gobra:endrewrite 66239cff85d3bf25c4daa1d173a4c87733b57ef726a40dc7d98f63cf47ccdf38
 	}
@@ -137,8 +138,8 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 	// @ invariant forall j int :: {j in indices} j in indices ==> j < idx
 	// @ invariant acc(sl.Bytes(olds, 0, len(olds)), R39)
 	// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R39)
-	// @ invariant forall j int :: { j in indices }{ View(olds)[j:j+len(sep)] } j in indices ==> View(olds)[j:j+len(sep)] == View(sep) && !SetContainsInRange(indices, j-len(sep), j)
-	// @ invariant forall j int :: { j in indices }{ View(olds)[j:j+len(sep)] } !(j in indices) ==> !(InRangeInc(j, 0, idx - len(sep))) || View(olds)[j:j+len(sep)] != View(sep) || SetContainsInRange(indices, j-len(sep), j)
+	// @ invariant forall j int :: { j in indices }{ sl.View(olds)[j:j+len(sep)] } j in indices ==> sl.View(olds)[j:j+len(sep)] == sl.View(sep) && !SetContainsInRange(indices, j-len(sep), j)
+	// @ invariant forall j int :: { j in indices }{ sl.View(olds)[j:j+len(sep)] } !(j in indices) ==> !(InRangeInc(j, 0, idx - len(sep))) || sl.View(olds)[j:j+len(sep)] != sl.View(sep) || SetContainsInRange(indices, j-len(sep), j)
 	// @ invariant forall j int :: { j in indices } j in indices ==> InRange(j, 0, idx-len(sep))
 	// @ invariant forall j int :: { j in indices } j in indices ==> InRange(j, 0, len(olds) - len(sep))
 	// @ invariant forall i, j int  :: { i in indices, j in indices }  (i in indices) && (j in indices) && i != j ==> (i + len(sep) < j) || (j + len(sep) < i)
@@ -154,17 +155,17 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 
 		// @ fold acc(sl.Bytes(s, 0, len(s)), p)
 		i := Index(s, sep)
-		// @ ghost vs := View(s)
+		// @ ghost vs := sl.View(s)
 		// @ unfold acc(sl.Bytes(s, 0, len(s)), p)
 
 		// @ fold acc(sl.Bytes(olds, 0, len(olds)), p)
-		// @ assert vs == View(olds)[idx:]
+		// @ assert vs == sl.View(olds)[idx:]
 		if i == -1 {
 
-			// @ ghost vs := View(olds)
-			// @ ghost vsep := View(sep)
+			// @ ghost vs := sl.View(olds)
+			// @ ghost vsep := sl.View(sep)
 
-			// @ lemmaCountAux(View(olds), View(sep), indices, idx)
+			// @ lemmaCountAux(sl.View(olds), sl.View(sep), indices, idx)
 
 			return n // @ , indices
 		}
@@ -199,7 +200,7 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 //
 // @ preserves acc(sl.Bytes(subslice, 0, len(subslice)), R40)
 //
-// @ ensures res == ( exists i int :: { View(b)[i:i+len(subslice)] } 0 <= i && i + len(subslice) <= len(b) && View(b)[i:i+len(subslice)] == View(subslice) )
+// @ ensures res == ( exists i int :: { sl.View(b)[i:i+len(subslice)] } 0 <= i && i + len(subslice) <= len(b) && sl.View(b)[i:i+len(subslice)] == sl.View(subslice) )
 //
 // @ decreases
 func Contains(b, subslice []byte) (res bool) {
@@ -224,9 +225,9 @@ func ContainsRune(b []byte, r rune) bool {
 //
 // @ ensures -1 <= res && res < len(b)
 //
-// @ ensures res != -1 ==> ((forall i int :: {View(b)[i]} 0 <= i && i < res ==> View(b)[i] != c) && View(b)[res] == c)
+// @ ensures res != -1 ==> ((forall i int :: {sl.View(b)[i]} 0 <= i && i < res ==> sl.View(b)[i] != c) && sl.View(b)[res] == c)
 //
-// @ ensures res == -1 == (forall i int :: {View(b)[i]} 0 <= i && i < len(b) ==> View(b)[i] != c)
+// @ ensures res == -1 == (forall i int :: {sl.View(b)[i]} 0 <= i && i < len(b) ==> sl.View(b)[i] != c)
 //
 // @ decreases
 func IndexByte(b []byte, c byte) (res int) {
@@ -920,7 +921,7 @@ func Map(mapping func(r rune) rune, s []byte) []byte {
 //
 // @ ensures len(res) > 0 ==> sl.Bytes(res, 0, len(res))
 //
-// @ ensures len(res) > 0 ==> View(res) == SpecRepeat(View(b), count)
+// @ ensures len(res) > 0 ==> sl.View(res) == bytes.Repeat(sl.View(b), count)
 func Repeat(b []byte, count int) (res []byte) {
 	if count == 0 {
 		return []byte{}
@@ -948,9 +949,9 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ LemmaMulPositive(len(b), count)
 	// @ assert len(b) <= len(nb)
 	// @ assert bp == len(b)
-	// @ assert View(nb)[:bp] == View(b)
-	// @ lemmaSpecRepeat_1(View(b))
-	// @ assert SpecRepeat(View(b), 1) == View(b)
+	// @ assert sl.View(nb)[:bp] == sl.View(b)
+	// @ lemmaSpecRepeat_1(sl.View(b))
+	// @ assert bytes.Repeat(sl.View(b), 1) == sl.View(b)
 
 	// @ invariant 0 < count
 	// @ invariant 0 < i
@@ -960,18 +961,18 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ invariant len(nb) == len(b)*count
 	// @ invariant acc(sl.Bytes(b, 0, len(b)), R41)
 	// @ invariant sl.Bytes(nb, 0, len(nb))
-	// @ invariant View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
+	// @ invariant sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 	for bp < len(nb) {
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
+		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 		// @ lemmaStillHaveToRepeat(i, count, bp, len(b), len(nb))
 		// @ assert MinInt(count, i) == i
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == View(nb)[:i * len(b)] //== SpecRepeat(View(b), i)
-		// @ assert View(nb)[:i * len(b)] == View(nb)[:bp]
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == View(nb)[:bp]
-		// @ assert SpecRepeat(View(b), MinInt(count, i)) == SpecRepeat(View(b), i)
-		// @ LemmaEqTransitive_seq(View(nb)[:bp],View(nb)[:MinInt(count, i) * len(b)], SpecRepeat(View(b), MinInt(count, i)))
-		// @ assert View(nb)[:bp] == SpecRepeat(View(b), MinInt(count, i))
-		// @ assert View(nb)[:bp] == SpecRepeat(View(b), i)
+		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == sl.View(nb)[:i * len(b)] //== bytes.Repeat(sl.View(b), i)
+		// @ assert sl.View(nb)[:i * len(b)] == sl.View(nb)[:bp]
+		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == sl.View(nb)[:bp]
+		// @ assert bytes.Repeat(sl.View(b), MinInt(count, i)) == bytes.Repeat(sl.View(b), i)
+		// @ LemmaEqTransitive_seq(sl.View(nb)[:bp],sl.View(nb)[:MinInt(count, i) * len(b)], bytes.Repeat(sl.View(b), MinInt(count, i)))
+		// @ assert sl.View(nb)[:bp] == bytes.Repeat(sl.View(b), MinInt(count, i))
+		// @ assert sl.View(nb)[:bp] == bytes.Repeat(sl.View(b), i)
 		// @ unfold sl.Bytes(nb, 0, len(nb))
 		// @ assert 0 <= bp && bp <= len(nb)
 		// @ assert bp == i * len(b)
@@ -980,8 +981,8 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ nCopied :=
 		copy(nb[bp:], nb[:bp] /* @, R40 @ */)
 		// @ fold sl.Bytes(nb, 0, len(nb))
-		// @ assert View(nb)[:i * len(b)] == SpecRepeat(View(b), i)
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
+		// @ assert sl.View(nb)[:i * len(b)] == bytes.Repeat(sl.View(b), i)
+		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 
 		// @ assert InRangeInc(bp, 0, len(nb))
 		// @ assert InRangeInc(nCopied, 0, bp)
@@ -989,7 +990,7 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ lemmaDidCopy(nb, bp, nCopied)
 
 		// @ assert nCopied <= bp
-		// @ assert View(nb)[:nCopied] == View(nb)[bp:bp+nCopied]
+		// @ assert sl.View(nb)[:nCopied] == sl.View(nb)[bp:bp+nCopied]
 
 		// @ assert len(nb) == len(b) * count
 		// @ assert InRangeInc(bp, 0, len(nb))
@@ -1006,14 +1007,14 @@ func Repeat(b []byte, count int) (res []byte) {
 		@ */
 		// # assert i <= count ==> nCopied == bp
 		// @ assert bp == i * len(b)
-		// @ assert View(nb)[:nCopied] == View(nb)[bp:bp+nCopied]
+		// @ assert sl.View(nb)[:nCopied] == sl.View(nb)[bp:bp+nCopied]
 		// @ assert len(nb) == len(b) * count
 
-		// @ assert len(b) == len(View(b))
-		// @ assert len(View(nb)) == len(nb)
-		// @ LemmaEqTransitive_int( len(View(nb)), len(nb), len(b) * count )
-		// @ assert len(View(nb)) == len(b) * count
-		// @ assert len(View(nb)) == len(View(b)) * count
+		// @ assert len(b) == len(sl.View(b))
+		// @ assert len(sl.View(nb)) == len(nb)
+		// @ LemmaEqTransitive_int( len(sl.View(nb)), len(nb), len(b) * count )
+		// @ assert len(sl.View(nb)) == len(b) * count
+		// @ assert len(sl.View(nb)) == len(sl.View(b)) * count
 		/* @
 		ghost if bp == nCopied {
 			assert len(nb)-bp >= bp
@@ -1033,44 +1034,44 @@ func Repeat(b []byte, count int) (res []byte) {
 			assert count <= i*2
 		}
 		@ */
-		// @ lemmaDouble(View(nb), View(b), i, bp, count, nCopied)
+		// @ lemmaDouble(sl.View(nb), sl.View(b), i, bp, count, nCopied)
 
-		// @ prev := View(nb)[:i * len(b)]
-		// @ assert prev == SpecRepeat(View(b), i)
+		// @ prev := sl.View(nb)[:i * len(b)]
+		// @ assert prev == bytes.Repeat(sl.View(b), i)
 		// @ doubled := (prev ++ prev)[:count * len(b)]
-		// @ assert doubled == View(nb)[: MinInt(count, i*2) * len(b)]
-		// @ lemmaSpecRepeat_2n(View(b), i)
-		// @ assert SpecRepeat(View(b), 2 * i) == SpecRepeat(View(b), i) ++ SpecRepeat(View(b), i)
+		// @ assert doubled == sl.View(nb)[: MinInt(count, i*2) * len(b)]
+		// @ lemmaSpecRepeat_2n(sl.View(b), i)
+		// @ assert bytes.Repeat(sl.View(b), 2 * i) == bytes.Repeat(sl.View(b), i) ++ bytes.Repeat(sl.View(b), i)
 		// @ assert i <= count
-		// @ assert View(nb)[:i * len(b)] == SpecRepeat(View(b), i)
-		// @ assert doubled == SpecRepeat(View(b), 2 * i)[: count * len(b)]
-		// @ assert View(nb)[: MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), 2 * i)[: count * len(b)]
-		// @ lemmaSlicingSpecRepeat(View(b), 2*i, MinInt(count, i*2))
-		// @ assert SpecRepeat(View(b), 2 * i)[: MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), MinInt(count, i * 2))
-		// @ vb := View(b)
-		// @ vnb := View(nb)
+		// @ assert sl.View(nb)[:i * len(b)] == bytes.Repeat(sl.View(b), i)
+		// @ assert doubled == bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)]
+		// @ assert sl.View(nb)[: MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)]
+		// @ lemmaSlicingSpecRepeat(sl.View(b), 2*i, MinInt(count, i*2))
+		// @ assert bytes.Repeat(sl.View(b), 2 * i)[: MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i * 2))
+		// @ vb := sl.View(b)
+		// @ vnb := sl.View(nb)
 		// @ assert 0 < count
 		// @ assert sl.Bytes(nb, 0, len(nb))
 
-		// @ lemmaSlicingSpecRepeat(View(b), 2 * i, count)
-		// @ assert SpecRepeat(View(b), 2 * i)[: count * len(b)] == SpecRepeat(View(b), MinInt(count, i*2))
-		// @ LemmaEqTransitive_seq(doubled, SpecRepeat(View(b), 2 * i)[: count * len(b)] , SpecRepeat(View(b), MinInt(count, i*2)) )
-		// @ assert doubled == SpecRepeat(View(b), MinInt(count, i*2))
-		// @ assert View(nb)[:MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), MinInt(count, i*2))
+		// @ lemmaSlicingSpecRepeat(sl.View(b), 2 * i, count)
+		// @ assert bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
+		// @ LemmaEqTransitive_seq(doubled, bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)] , bytes.Repeat(sl.View(b), MinInt(count, i*2)) )
+		// @ assert doubled == bytes.Repeat(sl.View(b), MinInt(count, i*2))
+		// @ assert sl.View(nb)[:MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
 
 		// @ decreases
 		// @ requires acc(sl.Bytes(b, 0, len(b)), R50)
 		// @ requires acc(sl.Bytes(nb, 0, len(nb)), R50)
 		// @ requires 0 < count
 		// @ requires 0 < i
-		// @ requires View(nb)[:MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), MinInt(count, i*2))
+		// @ requires sl.View(nb)[:MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
 		// @ preserves 0 <= bp
 		// @ preserves bp == len(b) * i
 		// @ ensures 0 < count
 		// @ ensures 0 < i
 		// @ ensures acc(sl.Bytes(b, 0, len(b)), R50)
 		// @ ensures acc(sl.Bytes(nb, 0, len(nb)), R50)
-		// @ ensures View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
+		// @ ensures sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 		// @ outline (
 		// @ LemmaMul2Inj(bp, i, bp*2, i*2, len(b))
 		// @ assert bp*2 == len(b) * i*2
@@ -1081,21 +1082,21 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ assert bp0 == len(b) * i*2
 		// @ LemmaMulSubst1( i*2, i0, bp0, len(b) )
 		bp *= 2
-		// @ assert View(nb)[:MinInt(count, i*2) * len(b)] == SpecRepeat(View(b), MinInt(count, i*2))
-		// @ assert len(View(b)) == len(b)
-		// @ lemmaSubstV(View(nb), View(b), count, i*2, i0)
-		// @ assert View(nb)[:MinInt(count, i0) * len(b)] == SpecRepeat(View(b), MinInt(count, i0))
+		// @ assert sl.View(nb)[:MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
+		// @ assert len(sl.View(b)) == len(b)
+		// @ lemmaSubstV(sl.View(nb), sl.View(b), count, i*2, i0)
+		// @ assert sl.View(nb)[:MinInt(count, i0) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i0))
 		// @ i *= 2
 		// @ assert i0 == i
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
+		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 		// @ )
 		// @ assert 0 < i
 		// @ assert bp == len(b) * i
 		// @ assert bp >= 0
 		// @ assert sl.Bytes(nb, 0, len(nb))
-		// @ assert vnb == View(nb)
-		// @ assert vb == View(b)
-		// @ assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
+		// @ assert vnb == sl.View(nb)
+		// @ assert vb == sl.View(b)
+		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 	}
 
 	/* @
@@ -1115,12 +1116,12 @@ func Repeat(b []byte, count int) (res []byte) {
 		LemmaEqSymmetric_int(len(nb), len(b)*count)
 		assert len(b) * count == len(nb)
 		assert count * len(b) == len(nb)
-		assert View(nb)[:MinInt(count, i) * len(b)] == SpecRepeat(View(b), MinInt(count, i))
-		assert View(nb)[:MinInt(count, i) * len(b)] == View(nb)
-		LemmaEqTransitive_seq(View(nb), View(nb)[:MinInt(count, i) * len(b)],  SpecRepeat(View(b), MinInt(count, i)))
-		assert View(nb) == SpecRepeat(View(b), MinInt(count, i))
+		assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
+		assert sl.View(nb)[:MinInt(count, i) * len(b)] == sl.View(nb)
+		LemmaEqTransitive_seq(sl.View(nb), sl.View(nb)[:MinInt(count, i) * len(b)],  bytes.Repeat(sl.View(b), MinInt(count, i)))
+		assert sl.View(nb) == bytes.Repeat(sl.View(b), MinInt(count, i))
 		ghost if len(nb) > 0 {
-			assert View(nb) == SpecRepeat(View(b), count)
+			assert sl.View(nb) == bytes.Repeat(sl.View(b), count)
 		}
 	}
 	@ */
@@ -2191,12 +2192,12 @@ hasUnicode:
 //
 // @ ensures res != -1 ==> forall i int :: {&s[res:res+len(sep)][i]}{&s[i+res]} 0 <= i && i < len(s[res:res+len(sep)]) ==> &s[res:res+len(sep)][i] == &s[i+res]
 //
-// @ ensures res != -1 ==> View(s)[res:res+len(sep)] == View(sep)
+// @ ensures res != -1 ==> sl.View(s)[res:res+len(sep)] == sl.View(sep)
 //
 // # this property is not verified (yet)
-// @ ensures res != -1 ==> forall i int :: {View(s)[i:i+len(sep)]} 0 <= i && i < res ==> View(s)[i:i+len(sep)] != View(sep)
+// @ ensures res != -1 ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i < res ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
 //
-// @ ensures res == -1 ==> forall i int :: {View(s)[i:i+len(sep)]} 0 <= i && i + len(sep) <= len(s) ==> View(s)[i:i+len(sep)] != View(sep)
+// @ ensures res == -1 ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i + len(sep) <= len(s) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
 //
 // @ decreases
 func Index(s, sep []byte) (res int) {
@@ -2212,7 +2213,7 @@ func Index(s, sep []byte) (res int) {
 		res = IndexByte(s,
 			/* @ unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in @ */ sep[0])
 		// @ ghost s0 := unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in sep[0]
-		// @ assert View(sep)[0] == s0
+		// @ assert sl.View(sep)[0] == s0
 		return res
 		//gobra:endrewrite e4ce06c882699aa24a46ac5f5ed3a2d1331f7d8c7b2a871c9ffe07721bfb9039
 	case n == len(s):
@@ -2242,15 +2243,15 @@ func Index(s, sep []byte) (res int) {
 
 		// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
 		// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R40)
-		// @ invariant c0 == View(sep)[0]
-		// @ invariant c1 == View(sep)[1]
+		// @ invariant c0 == sl.View(sep)[0]
+		// @ invariant c1 == sl.View(sep)[1]
 		// @ invariant i >= 0
 		// @ invariant fails >= 0
 		// @ invariant t == len(s) - n + 1
-		// @ invariant forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
+		// @ invariant forall j int :: { sl.View(s)[j:j+len(sep)] } 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
 		// @ decreases t - i
 		for i < t {
-			// @ ghost vs := View(s)
+			// @ ghost vs := sl.View(s)
 			// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
 			if s[i] != c0 {
 				// IndexByte is faster than bytealg.Index, so use it as long as
@@ -2258,19 +2259,19 @@ func Index(s, sep []byte) (res int) {
 				// @ SubSliceOverlaps(s, i+1, t)
 				// @ fold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 				o := IndexByte(s[i+1:t], c0)
-				// # assert forall j int :: {View(s[i+1:t])[j]} 0 <= j && j < o ==> View(s[i+1:t])[j] != c0
-				// @ assume forall j int :: {View(s)[i+1:t][j]} 0 <= j && j < o ==> View(s)[i+1:t][j] != c0
+				// # assert forall j int :: {sl.View(s[i+1:t])[j]} 0 <= j && j < o ==> sl.View(s[i+1:t])[j] != c0
+				// @ assume forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < o ==> sl.View(s)[i+1:t][j] != c0
 
 				if o < 0 {
-					// @ assume forall j int :: {View(s)[i+1:t][j]} 0 <= j && j < len(s[i+1:t]) ==> View(s)[i+1:t][j] != c0
+					// @ assume forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < len(s[i+1:t]) ==> sl.View(s)[i+1:t][j] != c0
 					// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 					// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-					// @ lemmaIndexIndexByteNotFound(View(s), View(sep), i, t)
+					// @ lemmaIndexIndexByteNotFound(sl.View(s), sl.View(sep), i, t)
 					return -1
 				}
 				// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 
-				// @ lemmaIndexIndexByteIsNotPrefix(View(s), View(sep), i, t, o)
+				// @ lemmaIndexIndexByteIsNotPrefix(sl.View(s), sl.View(sep), i, t, o)
 
 				i += o + 1
 			}
@@ -2299,25 +2300,25 @@ func Index(s, sep []byte) (res int) {
 				// @ SubSliceOverlaps(s, i, len(s))
 				// @ fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				r := bytealg.Index(s[i:], sep)
-				// @ assert r != -1 ==> forall j int :: {View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> View(s[i:])[j:j+len(sep)] != View(sep)
-				// @ ghost if r != -1 { lemmaViewSliceSepEquals(s, View(sep), i, r) }
+				// @ assert r != -1 ==> forall j int :: {sl.View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s[i:])[j:j+len(sep)] != sl.View(sep)
+				// @ ghost if r != -1 { lemmaViewSliceSepEquals(s, sl.View(sep), i, r) }
 				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 				if r >= 0 {
 
-					// @ assert forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> View(s)[i:][j:j+len(sep)] != View(sep)
-					// @ lemmaSliceSequence(View(s), View(sep), i, r)
+					// @ assert forall j int :: {sl.View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s)[i:][j:j+len(sep)] != sl.View(sep)
+					// @ lemmaSliceSequence(sl.View(s), sl.View(sep), i, r)
 
-					// @ assert forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
-					// # assert forall j int :: { View(s)[j:j+len(sep)] } 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
-					// @ lemmaIndexAdvance(View(s), View(sep), i, r+i)
-					// @ assert forall j int :: {View(s)[j:j+len(sep)]} 0 <= j && j < r+i ==> View(s)[j:j+len(sep)] != View(sep)
+					// @ assert forall j int :: { sl.View(s)[j:j+len(sep)] } 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
+					// # assert forall j int :: { sl.View(s)[j:j+len(sep)] } 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
+					// @ lemmaIndexAdvance(sl.View(s), sl.View(sep), i, r+i)
+					// @ assert forall j int :: {sl.View(s)[j:j+len(sep)]} 0 <= j && j < r+i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
 
 					// @ assert r + i != -1
 
 					return r + i
 				}
-				// @ assert -1 == -1 ==> forall k int :: {View(s)[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> View(s)[k:k+len(sep)] != View(sep)
+				// @ assert -1 == -1 ==> forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
 				return -1
 			}
 		}
@@ -2330,12 +2331,12 @@ func Index(s, sep []byte) (res int) {
 	i := 0
 	fails := 0
 	t := len(s) - n + 1
-	// @ ghost vsep := View(sep)
-	// @ ghost vs := View(s)
+	// @ ghost vsep := sl.View(sep)
+	// @ ghost vs := sl.View(s)
 	// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
 	// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R40)
-	// @ invariant vs == View(s)
-	// @ invariant vsep == View(sep)
+	// @ invariant vs == sl.View(s)
+	// @ invariant vsep == sl.View(sep)
 	// @ invariant c0 == vsep[0]
 	// @ invariant c1 == vsep[1]
 	// @ invariant InRangeInc(i, 0, t)
@@ -2348,7 +2349,7 @@ func Index(s, sep []byte) (res int) {
 			// @ assert forall j int :: {&s[i+1:t][j]} 0 <= j && j < len(s[i+1:t]) ==> &s[i+1:t][j] == &s[j+i+1]
 			// @ fold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 			o := IndexByte(s[i+1:t], c0)
-			// @ assert View(s[i+1:t]) == vs[i+1:t]
+			// @ assert sl.View(s[i+1:t]) == vs[i+1:t]
 			// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 			if o < 0 {
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2366,7 +2367,7 @@ func Index(s, sep []byte) (res int) {
 			// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
 			//gobra:endrewrite 5e92da7b0d472efdc4e87211ab9ead496a89c44d2219edf05a825aa7b3088140
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-			// @ assert i != -1 ==> forall j int :: {View(s)[j:j+len(sep)]} 0 <= j && j < i ==> View(s)[j:j+len(sep)] != View(sep)
+			// @ assert i != -1 ==> forall j int :: {sl.View(s)[j:j+len(sep)]} 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
 			return i
 		}
 		// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
@@ -2390,7 +2391,7 @@ func Index(s, sep []byte) (res int) {
 				return -1
 			}
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-			// @ assume forall k int :: {View(s)[k:k+len(sep)]} 0 <= k && k < i+j ==> View(s)[k:k+len(sep)] != View(sep)
+			// @ assume forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k < i+j ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
 			return i + j
 		}
 		// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2412,7 +2413,7 @@ func Index(s, sep []byte) (res int) {
 // @ ensures found ==> len(b) + len(sep) + len(after) == len(s)
 // @ ensures found ==> forall i int :: {&s[:len(b)][i]} 0 <= i && i < len(s[:len(b)]) ==> &s[:len(b)][i] == &b[i]
 // @ ensures found ==> forall i int :: {&s[len(b)+len(sep):][i]} 0 <= i && i < len(s[len(b)+len(sep):]) ==> &s[len(b)+len(sep):][i] == &after[i]
-// @ ensures !found ==> forall i int :: {View(s)[i:i+len(sep)]} 0 <= i && i + len(sep) <= len(s) ==> View(s)[i:i+len(sep)] != View(sep)
+// @ ensures !found ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i + len(sep) <= len(s) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
 // @ ensures !found ==> len(s) == len(b) && (forall i int :: {&s[i]}{&b[i]} 0 <= i && i < len(s) ==> &s[i] == &b[i]) && after == nil
 //
 // @ decreases
@@ -2432,7 +2433,7 @@ func Cut(s, sep []byte) (b, after []byte, found bool) {
 //
 // @ ensures sl.Bytes(res, 0, len(res))
 //
-// @ ensures View(b) == View(res)
+// @ ensures sl.View(b) == sl.View(res)
 //
 // @ decreases
 func Clone(b []byte) (res []byte) {

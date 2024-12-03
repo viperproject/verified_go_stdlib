@@ -6,6 +6,7 @@ import (
 	. "verification/utils/definitions"
 	// b "verification/utils/bitwise"
 	sl "gobra-libs/byteslice"
+	bytes "gobra-libs/bytes"
 	// seqs "verification/utils/seqs"
 	// sets "verification/utils/sets"
 	. "bytes/spec"
@@ -18,7 +19,7 @@ requires acc(sl.Bytes(b, 0, len(b)), p)
 requires r == ((unfolding acc(sl.Bytes(a, 0, len(a)), p) in string(a)) == (unfolding acc(sl.Bytes(b, 0, len(b)), p) in string(b)))
 ensures acc(sl.Bytes(a, 0, len(a)), p)
 ensures acc(sl.Bytes(b, 0, len(b)), p)
-ensures r == (View(a) == View(b))
+ensures r == (sl.View(a) == sl.View(b))
 decreases
 func stringEqualsImplViewEquals(r bool, a, b []byte, p perm)
 
@@ -44,37 +45,37 @@ func lemmaCountAux(s, sep seq[byte], indices set[int], idx int) {
 // Repeat
 
 ghost
-ensures SpecRepeat(b, 1) == b
+ensures bytes.Repeat(b, 1) == b
 decreases
 func lemmaSpecRepeat_1(b seq[byte]) {
-	assert SpecRepeat(b, 1) == b ++ SpecRepeat(b, 0)
+	assert bytes.Repeat(b, 1) == b ++ bytes.Repeat(b, 0)
 }
 
 ghost
 requires n >= 0
-ensures b ++ SpecRepeat(b, n) == SpecRepeat(b, n) ++ b
+ensures b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n) ++ b
 decreases
 func axiomSpecRepeatCommutative(b seq[byte], n int)
 
 ghost
 requires n >= 0
-ensures SpecRepeat(b, 2 * n) == SpecRepeat(b, n) ++ SpecRepeat(b, n)
+ensures bytes.Repeat(b, 2 * n) == bytes.Repeat(b, n) ++ bytes.Repeat(b, n)
 decreases n
 func lemmaSpecRepeat_2n(b seq[byte], n int) {
 	if n != 0 {
-		assert SpecRepeat(b, n) == b ++ SpecRepeat(b, n - 1)
-		assert SpecRepeat(b, n) ++ SpecRepeat(b, n) == b ++ SpecRepeat(b, n - 1) ++ b ++ SpecRepeat(b, n - 1)
+		assert bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n - 1)
+		assert bytes.Repeat(b, n) ++ bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1)
 		// order of repeating doesn't matter because it's always the same element that is repeated
-		assert b ++ SpecRepeat(b, n - 1) ++ b ++ SpecRepeat(b, n - 1) == b ++ (SpecRepeat(b, n - 1) ++ b) ++ SpecRepeat(b, n - 1)
+		assert b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1) == b ++ (bytes.Repeat(b, n - 1) ++ b) ++ bytes.Repeat(b, n - 1)
 		axiomSpecRepeatCommutative(b, n - 1)
-		assert b ++ (SpecRepeat(b, n - 1) ++ b) ++ SpecRepeat(b, n - 1) == b ++ (b ++ SpecRepeat(b, n - 1)) ++ SpecRepeat(b, n - 1)
-		assert b ++ SpecRepeat(b, n - 1) ++ b ++ SpecRepeat(b, n - 1) == b ++ b ++ SpecRepeat(b, n - 1) ++ SpecRepeat(b, n - 1)
+		assert b ++ (bytes.Repeat(b, n - 1) ++ b) ++ bytes.Repeat(b, n - 1) == b ++ (b ++ bytes.Repeat(b, n - 1)) ++ bytes.Repeat(b, n - 1)
+		assert b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1) == b ++ b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
 		lemmaSpecRepeat_2n(b, n - 1)
-		assert SpecRepeat(b, n - 1) ++ SpecRepeat(b, n - 1) == SpecRepeat(b, 2 * (n - 1))
-		assert SpecRepeat(b, 2 * n - 1) == b ++ SpecRepeat(b, n - 1) ++ SpecRepeat(b, n - 1)
-		assert SpecRepeat(b, 2 * n) == b ++ b ++ SpecRepeat(b, n - 1) ++ SpecRepeat(b, n - 1)
+		assert bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1) == bytes.Repeat(b, 2 * (n - 1))
+		assert bytes.Repeat(b, 2 * n - 1) == b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
+		assert bytes.Repeat(b, 2 * n) == b ++ b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
 	} else {
-		assert SpecRepeat(b, 2 * 0) == SpecRepeat(b, 0) ++ SpecRepeat(b, 0)
+		assert bytes.Repeat(b, 2 * 0) == bytes.Repeat(b, 0) ++ bytes.Repeat(b, 0)
 	}
 }
 
@@ -102,8 +103,8 @@ ghost
 requires a == b
 requires count >= 0
 requires a >= 0
-requires nb[:MinInt(count, a) * len(s)] == SpecRepeat(s, MinInt(count, a))
-ensures  nb[:MinInt(count, b) * len(s)] == SpecRepeat(s, MinInt(count, b))
+requires nb[:MinInt(count, a) * len(s)] == bytes.Repeat(s, MinInt(count, a))
+ensures  nb[:MinInt(count, b) * len(s)] == bytes.Repeat(s, MinInt(count, b))
 decreases
 func lemmaSubstV(nb, s seq[byte], count, a, b int ) { }
 
@@ -115,7 +116,7 @@ requires acc(sl.Bytes(nb, 0, len(nb)), R50)
 requires unfolding acc(sl.Bytes(nb, 0, len(nb)), R50) in forall i int :: {&nb[bp:][i]} 0 <= i && i < len(nb[bp:]) ==> &nb[bp:][i] == &nb[i+bp]
 requires unfolding acc(sl.Bytes(nb, 0, len(nb)), R50) in forall i int :: {&nb[bp:][i]}{&nb[:bp][i]} 0 <= i && i < nCopied ==>  nb[bp:][i] ==  nb[:bp][i]
 ensures acc(sl.Bytes(nb, 0, len(nb)), R50)
-ensures View(nb)[:nCopied] == View(nb)[bp:bp+nCopied]
+ensures sl.View(nb)[:nCopied] == sl.View(nb)[bp:bp+nCopied]
 decreases
 func lemmaDidCopy(nb []byte, bp, nCopied int) {
 	unfold acc(sl.Bytes(nb, 0, len(nb)), R50)
@@ -166,14 +167,14 @@ func lemmaDouble(nb seq[byte], b seq[byte], i, bp, count, nCopied int) {
 
 ghost
 requires n >= 0
-ensures len(SpecRepeat(s, n)) == len(s) * n
+ensures len(bytes.Repeat(s, n)) == len(s) * n
 decreases n
 func lemmaSpecRepeatLength(s seq[byte], n int) {
 	switch {
 	case n == 0:
-		assert len(SpecRepeat(s, n)) == 0
+		assert len(bytes.Repeat(s, n)) == 0
 	default:
-		assert SpecRepeat(s, n) == s ++ SpecRepeat(s, n-1)
+		assert bytes.Repeat(s, n) == s ++ bytes.Repeat(s, n-1)
 		lemmaSpecRepeatLength(s, n-1)
 	}
 }
@@ -188,23 +189,23 @@ func lemmaSliceSeqConcat(a, b seq[byte], n int) { }
 ghost
 requires 0 <= a
 requires 0 <= b
-ensures SpecRepeat(s, a)[: b * len(s)] == SpecRepeat(s, MinInt(a, b))
+ensures bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
 decreases b
 func lemmaSlicingSpecRepeat(s seq[byte], a, b int) {
-	r := SpecRepeat(s, a)
+	r := bytes.Repeat(s, a)
 	switch {
 	case a == 0:
 		assert MinInt(a, b) == 0
-		assert SpecRepeat(s, 0) == seq[byte]{}
+		assert bytes.Repeat(s, 0) == seq[byte]{}
 	case b == 0:
 		assert MinInt(a, b) == 0
-		assert SpecRepeat(s, 0) == seq[byte]{}
+		assert bytes.Repeat(s, 0) == seq[byte]{}
 	case a == b:
-		assert SpecRepeat(s, a) == s ++ SpecRepeat(s, a-1)
+		assert bytes.Repeat(s, a) == s ++ bytes.Repeat(s, a-1)
 		lemmaSpecRepeatLength(s, a)
 		assert len(r) == len(s) * a
 		assert len(r) == len(s) * b
-		assert SpecRepeat(s, a)[: b * len(s)] == SpecRepeat(s, MinInt(a, b))
+		assert bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
 	case a <= b:
 		lemmaSpecRepeatLength(s, a)
 		assert len(r) == len(s) * a
@@ -212,23 +213,23 @@ func lemmaSlicingSpecRepeat(s seq[byte], a, b int) {
 		LemmaMulInjLeq(a, b, len(s))
 		assert a*len(s) <= b*len(s)
 		assert len(r) <= b * len(s)
-		assert SpecRepeat(s, a)[:b * len(s)] == SpecRepeat(s, a)
+		assert bytes.Repeat(s, a)[:b * len(s)] == bytes.Repeat(s, a)
 		assert MinInt(a, b) == a
-		assert SpecRepeat(s, MinInt(a, b)) == SpecRepeat(s, a)
-		assert SpecRepeat(s, a)[: b * len(s)] == SpecRepeat(s, MinInt(a, b))
-		LemmaEqTransitive_seq(SpecRepeat(s, a)[:b * len(s)],SpecRepeat(s, a),  SpecRepeat(s, MinInt(a, b)))
+		assert bytes.Repeat(s, MinInt(a, b)) == bytes.Repeat(s, a)
+		assert bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
+		LemmaEqTransitive_seq(bytes.Repeat(s, a)[:b * len(s)],bytes.Repeat(s, a),  bytes.Repeat(s, MinInt(a, b)))
 	case b < a:
-		assert SpecRepeat(s, a) == s ++ SpecRepeat(s, a - 1)
+		assert bytes.Repeat(s, a) == s ++ bytes.Repeat(s, a - 1)
 		lemmaSlicingSpecRepeat(s, a-1, b-1)
-		assert SpecRepeat(s, a-1)[: (b-1) * len(s)] == SpecRepeat(s, MinInt(a-1, b-1))
-		assert SpecRepeat(s, a)[: b * len(s)] == (s ++ SpecRepeat(s, a - 1))[: b * len(s)]
+		assert bytes.Repeat(s, a-1)[: (b-1) * len(s)] == bytes.Repeat(s, MinInt(a-1, b-1))
+		assert bytes.Repeat(s, a)[: b * len(s)] == (s ++ bytes.Repeat(s, a - 1))[: b * len(s)]
 		assert 1 <= b
 		LemmaMulInjLeq(1, b, len(s))
 		assert len(s) <= b * len(s)
-		lemmaSliceSeqConcat(s, SpecRepeat(s, a-1), b * len(s))
+		lemmaSliceSeqConcat(s, bytes.Repeat(s, a-1), b * len(s))
 		assert b * len(s) - len(s) == (b-1) * len(s)
-		assert (s ++ SpecRepeat(s, a - 1))[: b * len(s)] == s ++ SpecRepeat(s, a - 1)[:(b-1)*len(s)]
-		assert SpecRepeat(s, a)[: b * len(s)] == SpecRepeat(s, MinInt(a, b))
+		assert (s ++ bytes.Repeat(s, a - 1))[: b * len(s)] == s ++ bytes.Repeat(s, a - 1)[:(b-1)*len(s)]
+		assert bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
 	default:
 		assert false
 	}
@@ -292,26 +293,26 @@ requires InRangeInc(i, 0, len(s))
 requires InRangeInc(r, 0, len(s)-i)
 requires acc(sl.Bytes(s, 0, len(s)), R50)
 requires acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
-requires forall j int :: {View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> View(s[i:])[j:j+len(sep)] != sep
+requires forall j int :: {sl.View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s[i:])[j:j+len(sep)] != sep
 ensures acc(sl.Bytes(s, 0, len(s)), R50)
 ensures acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
-ensures forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> View(s)[i:][j:j+len(sep)] != sep
+ensures forall j int :: {sl.View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s)[i:][j:j+len(sep)] != sep
 decreases
 func lemmaViewSliceSepEquals(s []byte, sep seq[byte], i, r int) {
 	invariant InRangeInc(k, 0, r)
 	invariant acc(sl.Bytes(s, 0, len(s)), R50)
 	invariant acc(sl.Bytes(s[i:], 0, len(s[i:])), R50)
-	invariant forall j int :: {View(s[i:])[j:j+len(sep)]}{s[j]} 0 <= j && j < r ==> View(s[i:])[j:j+len(sep)] != sep
-	invariant forall j int :: {View(s)[i:][j:j+len(sep)]} 0 <= j && j < k ==> View(s)[i:][j:j+len(sep)] != sep
+	invariant forall j int :: {sl.View(s[i:])[j:j+len(sep)]}{s[j]} 0 <= j && j < r ==> sl.View(s[i:])[j:j+len(sep)] != sep
+	invariant forall j int :: {sl.View(s)[i:][j:j+len(sep)]} 0 <= j && j < k ==> sl.View(s)[i:][j:j+len(sep)] != sep
 	decreases r-k
 	for k := 0; k < r; k++ {
 		unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R50/2)
 		unfold acc(sl.Bytes(s, 0, len(s)), R50/2)
 		SubSliceOverlaps(s, i, len(s))
-		assert View(s)[i:][k] == View(s[i:])[k]
-		assert View(s)[i:][k:k+len(sep)] == View(s[i:])[k:k+len(sep)]
-		assert View(s[i:])[k:k+len(sep)] != sep
-		assert View(s)[i:][k:k+len(sep)] != sep
+		assert sl.View(s)[i:][k] == sl.View(s[i:])[k]
+		assert sl.View(s)[i:][k:k+len(sep)] == sl.View(s[i:])[k:k+len(sep)]
+		assert sl.View(s[i:])[k:k+len(sep)] != sep
+		assert sl.View(s)[i:][k:k+len(sep)] != sep
 		fold acc(sl.Bytes(s, 0, len(s)), R50/2)
 		fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R50/2)
 	}

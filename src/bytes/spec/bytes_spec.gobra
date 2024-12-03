@@ -7,23 +7,6 @@ import (
 )
 
 ghost
-requires acc(sl.Bytes(ub, 0, len(ub)), _)
-ensures len(res) == len(ub)
-ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
-    res[i] == sl.Byte(ub, 0, len(ub), i)
-decreases _
-pure func View(ub []byte) (res seq[byte])
-
-// TODO: make this opaque
-ghost
-requires count >= 0
-decreases count
-pure func SpecRepeat(b seq[byte], count int) (res seq[byte]) {
-	return count == 0 ? seq[byte]{} : ( b ++ SpecRepeat(b, count - 1) )
-}
-
-
-ghost
 requires low <= high
 ensures res == exists i int :: {i in s} i in s && low <= i && i < high
 opaque
