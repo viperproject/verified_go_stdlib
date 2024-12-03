@@ -97,7 +97,7 @@ func explode(s []byte, n int) (res [][]byte) {
 //
 // @ ensures len(indices) == res
 //
-// @ ensures len(sep) > 0  ==> forall i int :: { i in indices } (i in indices) ==> ( InRangeInc(i, 0, len(s) - len(sep)) && SubviewEq(sl.View(s), sl.View(sep), i) )
+// @ ensures len(sep) > 0  ==> forall i int :: { i in indices } (i in indices) ==> ( InRangeInc(i, 0, len(s) - len(sep)) && MatchesSubseqAt(sl.View(s), sl.View(sep), i) )
 //
 // @ ensures len(sep) > 0  ==> forall i, j int  :: { i in indices, j in indices }  (i in indices) && (j in indices) && i != j ==> (i + len(sep) <= j) || (j + len(sep) <= i)
 //

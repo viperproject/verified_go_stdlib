@@ -19,6 +19,6 @@ pure func SetContainsInRange(s set[int], low, high int) (res bool) {
 ghost
 requires 0 <= i && i + len(b) <= len(a)
 decreases
-pure func SubviewEq(a, b seq[byte], i int) (res bool) {
+pure func MatchesSubseqAt(a, b seq[byte], i int) (res bool) {
 	return a[i:i+len(b)] == b
 }
