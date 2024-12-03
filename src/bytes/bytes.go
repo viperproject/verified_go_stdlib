@@ -2089,6 +2089,7 @@ func Replace(s, oldval, newval []byte, n int) (res []byte) {
 func ReplaceAll(s, oldval, newval []byte) []byte {
 	return Replace(s, oldval, newval, -1)
 }
+//gobra:endrewrite 97c2ede7687475e639eb6cf004d3abccbd534c90686609842d241e0faf3710c5
 
 // EqualFold reports whether s and t, interpreted as UTF-8 strings,
 // are equal under simple Unicode case-folding, which is a more general
