@@ -6,7 +6,10 @@ import (
 	sl "gobra-libs/byteslice"
 )
 
-// utf8.Codepoints(s) returns the sequence of (utf-8 encoded) codepoints in `s`
+// utf8.Codepoints(s) returns the sequence of (utf-8 encoded) codepoints in `s`.
+// Handles invalid utf-8 by replacing offending bytes with RuneError.
+//
+// See utf8.DecodeRune
 ghost
 pure
 ensures 0 < len(s) ==> 0 < len(res)
