@@ -15,7 +15,7 @@ pure func SetContainsInRange(s set[int], low, high int) (res bool) {
 	return low < high && (low in s || ( low < high && SetContainsInRange(s, low + 1, high) ))
 }
 
-// returns true if a == a0 ++ b ++ a1 for some a0, a1
+// Returns true iff a == a[:i] ++ b ++ as for some as.
 ghost
 requires 0 <= i && i + len(b) <= len(a)
 decreases
