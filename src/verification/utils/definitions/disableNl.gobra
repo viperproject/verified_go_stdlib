@@ -31,7 +31,7 @@ requires a == b
 requires c == d * a
 ensures  c == d * b
 decreases
-func LemmaMulSubst1(a, b, c, d int) { }
+func LemmaMulSubst(a, b, c, d int) { }
 
 ghost
 requires a * 2 == a2
@@ -43,7 +43,7 @@ func LemmaMul2Inj(a, b, a2, b2, c int) {
 	assert a * 2 == (c * b) * 2
 	assert a * 2 == c * (b * 2)
 	assert a2 == c * (b * 2)
-	LemmaMulReplace(b*2, b2, c)
+	LemmaMulReplace(b * 2, b2, c)
 	assert a2 == c * b2
 }
 
@@ -67,26 +67,26 @@ requires c * a < c * b
 requires 0 < c
 ensures  a < b
 decreases
-func LemmaMulInjLtLeftInv(a, b, c int) {  }
+func LemmaMulInjLtLeftInv(a, b, c int) { }
 
 ghost
 requires a == b
-ensures  a*c == b*c
+ensures  a * c == b * c
 decreases
 func LemmaMulInjEq(a, b, c int) { }
 
 ghost
 requires a >= 0
 requires b >= 0
-ensures  a*b >= 0
+ensures  a * b >= 0
 decreases a
 func LemmaMulPos(a, b int) {
 	switch {
 		case a == 0:
-			assert a*b == 0
+			assert a * b == 0
 		default:
-			assert a*b == (a-1)*b + b
-			LemmaMulPos(a-1, b)
+			assert a * b == (a - 1) * b + b
+			LemmaMulPos(a - 1, b)
 	}
 }
 
@@ -132,7 +132,7 @@ func LemmaMulPositive(a, b int) {
 		assert a * b == a
 	} else {
 		assert a * b == a * (b - 1) + a
-		LemmaMulPositive(a, b-1)
-		assert a <= a * (b-1)+a
+		LemmaMulPositive(a, b - 1)
+		assert a <= a * (b - 1) + a
 	}
 }

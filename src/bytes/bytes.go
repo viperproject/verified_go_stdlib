@@ -1080,7 +1080,7 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ assert bp0 == bp*2
 		// @ assert i0 == i*2
 		// @ assert bp0 == len(b) * i*2
-		// @ LemmaMulSubst1( i*2, i0, bp0, len(b) )
+		// @ LemmaMulSubst( i*2, i0, bp0, len(b) )
 		bp *= 2
 		// @ assert sl.View(nb)[:MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
 		// @ assert len(sl.View(b)) == len(b)
