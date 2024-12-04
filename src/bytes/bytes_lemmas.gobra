@@ -12,14 +12,22 @@ import (
 	. "bytes/spec"
 )
 
+decreases
+requires acc(sl.Bytes(b, 0, len(b)), _)
+pure func String(b []byte) string  {
+	return unfolding acc(sl.Bytes(b, 0, len(b)), _) in string(b)
+}
+
+// We cannot yet prove this with the current incomplete encoding of strings
 ghost
 requires 0 < p
 requires acc(sl.Bytes(a, 0, len(a)), p)
 requires acc(sl.Bytes(b, 0, len(b)), p)
-requires r == ((unfolding acc(sl.Bytes(a, 0, len(a)), p) in string(a)) == (unfolding acc(sl.Bytes(b, 0, len(b)), p) in string(b)))
+requires r == (String(a) == String(b))
 ensures  acc(sl.Bytes(a, 0, len(a)), p)
 ensures  acc(sl.Bytes(b, 0, len(b)), p)
 ensures  r == (sl.View(a) == sl.View(b))
+trusted
 decreases
 func stringEqualsImplViewEquals(r bool, a, b []byte, p perm)
 
