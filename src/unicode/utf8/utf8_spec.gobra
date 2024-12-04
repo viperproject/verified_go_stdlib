@@ -36,7 +36,8 @@ func AppendRune(p []byte, r rune) []byte
 preserves acc(sl.Bytes(p, 0, len(p)), R50)
 ensures  len(p) > 0 ==> 1 <= size && size <= len(p)
 ensures  len(p) == 0 ==> size == 0
-ensures  len(p) > 0 ==> Codepoints(sl.View(p))[0] == r && Codepoints(sl.View(p)[size:]) == Codepoints(sl.View(p))[1:]
+ensures  len(p) > 0 ==>
+	Codepoints(sl.View(p))[0] == r && Codepoints(sl.View(p)[size:]) == Codepoints(sl.View(p))[1:]
 trusted
 decreases
 func DecodeRune(p []byte) (r rune, size int)
