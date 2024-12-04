@@ -2271,8 +2271,9 @@ func Index(s, sep []byte) (res int) {
 				// @ SubSliceOverlaps(s, i+1, t)
 				// @ fold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 				o := IndexByte(s[i+1:t], c0)
-				// # assert forall j int :: {sl.View(s[i+1:t])[j]} 0 <= j && j < o ==> sl.View(s[i+1:t])[j] != c0
-				// @ assume forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < o ==> sl.View(s)[i+1:t][j] != c0
+				// @ assert forall j int :: {sl.View(s[i+1:t])[j]} 0 <= j && j < o ==> sl.View(s[i+1:t])[j] != c0
+				// @ lemmaViewSubslice(s, i+1, t)
+				// @ assert forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < o ==> sl.View(s)[i+1:t][j] != c0
 
 				if o < 0 {
 					// @ assume forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < len(s[i+1:t]) ==> sl.View(s)[i+1:t][j] != c0

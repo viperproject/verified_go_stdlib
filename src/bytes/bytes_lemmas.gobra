@@ -357,3 +357,41 @@ func lemmaIndexIndexByteIsNotPrefix(s, sep seq[byte], i, t, o int) {
 		assert s[idx:idx+len(sep)] != sep
 	}
 }
+
+ghost
+requires InRangeInc(low, 0, len(s))
+requires InRangeInc(high, low, len(s))
+preserves acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50)
+preserves acc(sl.Bytes(s, 0, len(s)), R50)
+ensures sl.View(s[low:high]) == sl.View(s)[low:high]
+ensures sl.View(s)[low:high] == sl.View(s[low:high])
+decreases
+func lemmaViewSubslice(s []byte, low, high int) {
+	a := sl.View(s)[low:high]
+	b := sl.View(s[low:high])
+	l := len(sl.View(s)[low:high])
+	assert len(sl.View(s[low:high])) == l
+
+	invariant InRangeInc(k, 0, l)
+	invariant acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50)
+	invariant acc(sl.Bytes(s, 0, len(s)), R50)
+	invariant a == sl.View(s)[low:high]
+	invariant b == sl.View(s[low:high])
+	invariant forall i int :: {a[i]}{b[i]} 0 <= i && i < k ==> a[i] == b[i]
+	decreases l-k
+	for k := 0; k < l; k++ {
+		assert a[k] == sl.Byte(s, 0, len(s), k+low)
+		assert b[k] == sl.Byte(s[low:high], 0, len(s[low:high]), k)
+
+		unfold acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50/2)
+		unfold acc(sl.Bytes(s, 0, len(s)), R50/2)
+
+		SubSliceOverlaps(s, low, high)
+
+		fold acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50/2)
+		fold acc(sl.Bytes(s, 0, len(s)), R50/2)
+
+		assert a[k] == b[k]
+	}
+}
+
