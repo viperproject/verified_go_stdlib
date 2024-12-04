@@ -52,10 +52,27 @@ func lemmaRepeatOnce(b seq[byte]) {
 }
 
 ghost
+requires n > 0
+ensures bytes.Repeat(b, n) == bytes.Repeat(b, n-1) ++ b
+decreases n
+func lemmaRepeatFlip(b seq[byte], n int) {
+	if n == 1 {
+		assert bytes.Repeat(b, n-1) == seq[byte]{}
+	} else {
+		assert bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n-1)
+		lemmaRepeatFlip(b, n-1)
+		assert bytes.Repeat(b, n-1) == bytes.Repeat(b, n-2) ++ b
+	}
+}
+
+ghost
 requires n >= 0
 ensures  b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n) ++ b
 decreases
-func axiomRepeatCommutative(b seq[byte], n int)
+func lemmaRepeatCommutative(b seq[byte], n int) {
+	assert b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n+1)
+	lemmaRepeatFlip(b, n+1)
+}
 
 ghost
 requires n >= 0
@@ -67,7 +84,7 @@ func lemmaRepeat_2n(b seq[byte], n int) {
 		assert bytes.Repeat(b, n) ++ bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1)
 		// order of repeating doesn't matter because it's always the same element that is repeated
 		assert b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1) == b ++ (bytes.Repeat(b, n - 1) ++ b) ++ bytes.Repeat(b, n - 1)
-		axiomRepeatCommutative(b, n - 1)
+		lemmaRepeatCommutative(b, n - 1)
 		assert b ++ (bytes.Repeat(b, n - 1) ++ b) ++ bytes.Repeat(b, n - 1) == b ++ (b ++ bytes.Repeat(b, n - 1)) ++ bytes.Repeat(b, n - 1)
 		assert b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1) == b ++ b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
 		lemmaRepeat_2n(b, n - 1)
