@@ -4,11 +4,8 @@ package bytes
 
 import (
 	. "verification/utils/definitions"
-	// b "verification/utils/bitwise"
 	sl "gobra-libs/byteslice"
 	bytes "gobra-libs/bytes"
-	// seqs "verification/utils/seqs"
-	// sets "verification/utils/sets"
 	. "bytes/spec"
 )
 

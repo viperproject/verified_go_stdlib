@@ -13,8 +13,6 @@ import (
 	// @	sl "gobra-libs/byteslice"
 	// @	rsl "gobra-libs/runeslice"
 	// @	b "verification/utils/bitwise"
-	// #	seqs "gobra-libs/seqs"
-	// #	sets "gobra-libs/sets"
 	// @	. "bytes/spec"
 	// @	bytes "gobra-libs/bytes"
 	"internal/bytealg"
