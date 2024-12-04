@@ -950,7 +950,7 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ assert len(b) <= len(nb)
 	// @ assert bp == len(b)
 	// @ assert sl.View(nb)[:bp] == sl.View(b)
-	// @ lemmaSpecRepeat_1(sl.View(b))
+	// @ lemmaRepeatOnce(sl.View(b))
 	// @ assert bytes.Repeat(sl.View(b), 1) == sl.View(b)
 
 	// @ invariant 0 < count
@@ -1040,20 +1040,20 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ assert prev == bytes.Repeat(sl.View(b), i)
 		// @ doubled := (prev ++ prev)[:count * len(b)]
 		// @ assert doubled == sl.View(nb)[: MinInt(count, i*2) * len(b)]
-		// @ lemmaSpecRepeat_2n(sl.View(b), i)
+		// @ lemmaRepeat_2n(sl.View(b), i)
 		// @ assert bytes.Repeat(sl.View(b), 2 * i) == bytes.Repeat(sl.View(b), i) ++ bytes.Repeat(sl.View(b), i)
 		// @ assert i <= count
 		// @ assert sl.View(nb)[:i * len(b)] == bytes.Repeat(sl.View(b), i)
 		// @ assert doubled == bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)]
 		// @ assert sl.View(nb)[: MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)]
-		// @ lemmaSlicingSpecRepeat(sl.View(b), 2*i, MinInt(count, i*2))
+		// @ lemmaSlicingRepeat(sl.View(b), 2*i, MinInt(count, i*2))
 		// @ assert bytes.Repeat(sl.View(b), 2 * i)[: MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i * 2))
 		// @ vb := sl.View(b)
 		// @ vnb := sl.View(nb)
 		// @ assert 0 < count
 		// @ assert sl.Bytes(nb, 0, len(nb))
 
-		// @ lemmaSlicingSpecRepeat(sl.View(b), 2 * i, count)
+		// @ lemmaSlicingRepeat(sl.View(b), 2 * i, count)
 		// @ assert bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
 		// @ LemmaEqTransitive_seq(doubled, bytes.Repeat(sl.View(b), 2 * i)[: count * len(b)] , bytes.Repeat(sl.View(b), MinInt(count, i*2)) )
 		// @ assert doubled == bytes.Repeat(sl.View(b), MinInt(count, i*2))
@@ -2089,6 +2089,7 @@ func Replace(s, oldval, newval []byte, n int) (res []byte) {
 func ReplaceAll(s, oldval, newval []byte) []byte {
 	return Replace(s, oldval, newval, -1)
 }
+
 //gobra:endrewrite 97c2ede7687475e639eb6cf004d3abccbd534c90686609842d241e0faf3710c5
 
 // EqualFold reports whether s and t, interpreted as UTF-8 strings,
