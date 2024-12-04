@@ -2,6 +2,9 @@
 
 package unicode
 
+import (
+	. "verification/utils/definitions"
+)
 
 trusted
 decreases
@@ -36,14 +39,17 @@ decreases
 func ToTitle(r rune) rune
 
 trusted
+preserves acc(special, R50)
 decreases
 func (special SpecialCase) ToUpper(r rune) rune
 
 trusted
+preserves acc(special, R50)
 decreases
 func (special SpecialCase) ToTitle(r rune) rune
 
 trusted
+preserves acc(special, R50)
 decreases
 func (special SpecialCase) ToLower(r rune) rune
 

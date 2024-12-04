@@ -376,7 +376,9 @@ func IndexRune(s []byte, r rune) int {
 		return -1
 	default:
 		var b /* @ @ @ */ [utf8.UTFMax]byte
+		// @ fold sl.Bytes(b[:], 0, len(b[:]))
 		n := utf8.EncodeRune(b[:], r)
+		// @ unfold sl.Bytes(b[:], 0, len(b[:]))
 		// @ fold sl.Bytes(b[:n], 0, len(b[:n]))
 		return Index(s, b[:n])
 	}
@@ -1834,18 +1836,20 @@ func trimRightUnicode(s []byte, cutset string) []byte {
 	// @ invariant acc(sl.Bytes(olds, 0, len(olds)), R40)
 	// @ decreases len(s)
 	for len(s) > 0 {
-		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R40)
+		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R41)
 		r, n := rune(s[len(s)-1]), 1
 		if r >= utf8.RuneSelf {
+			// @ fold acc(sl.Bytes(s, 0, len(s)), R42)
 			r, n = utf8.DecodeLastRune(s)
+			// @ unfold acc(sl.Bytes(s, 0, len(s)), R42)
 		}
 		if !containsRune(cutset, r) {
-			// @ fold acc(sl.Bytes(olds, 0, len(olds)), R40)
+			// @ fold acc(sl.Bytes(olds, 0, len(olds)), R41)
 			break
 		}
 		// @ idx = len(s)-n
 		s = s[:len(s)-n]
-		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R40)
+		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R41)
 	}
 	return s
 }
@@ -1937,7 +1941,7 @@ func TrimSpace(s []byte) (res []byte) {
 //
 // @ ensures rsl.Runes(res, 0, len(res))
 //
-// @ ensures rsl.View(res) == utf8.Codepoints(s)
+// @ ensures rsl.View(res) == utf8.Codepoints(sl.View(s))
 //
 // @ decreases
 func Runes(s []byte) (res []rune) {
@@ -1951,33 +1955,39 @@ func Runes(s []byte) (res []rune) {
 
 	// @ ghost olds := s
 	// @ ghost idx := 0
-	// @ ghost codepoints := utf8.Codepoints(s)
+	// @ ghost codepoints := utf8.Codepoints(sl.View(s))
 	// @ fold rsl.Runes(t, 0, len(t))
 	// @ invariant i <= idx
 	// @ invariant 0 <= idx && idx <= len(olds)
 	// @ invariant acc(sl.Bytes(olds, 0, len(olds)), R40)
 	// @ invariant olds[idx:] === s
 	// @ invariant rsl.Runes(t, 0, len(t))
-	// @ invariant utf8.Codepoints(s) == codepoints[i:]
+	// @ invariant codepoints == utf8.Codepoints(sl.View(olds))
+	// @ invariant utf8.Codepoints(sl.View(olds)[idx:]) == codepoints[i:]
 	// @ invariant 0 <= i && i <= len(t)
-	// @ invariant i == len(t) - len(utf8.Codepoints(s))
+	// @ invariant i == len(t) - len(utf8.Codepoints(sl.View(olds)[idx:]))
 	// @ invariant len(s) > 0 ==> i < len(t)
 	// @ invariant rsl.View(t)[:i] == codepoints[:i]
 	// @ decreases len(s)
 	for len(s) > 0 {
 		// @ unfold rsl.Runes(t, 0, len(t))
-		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R40)
+		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R45)
 		// @ assert forall j int :: {&olds[idx:][j]} 0 <= j && j < len(olds[idx:]) ==> &olds[idx:][j] == &olds[j+idx]
-		// @ fold acc(sl.Bytes(s, 0, len(s)), R40)
+		// @ fold acc(sl.Bytes(s, 0, len(s)), R45)
 		r, l := utf8.DecodeRune(s)
-		// @ unfold acc(sl.Bytes(s, 0, len(s)), R40)
+		// @ assert utf8.Codepoints(sl.View(s)[l:]) == utf8.Codepoints(sl.View(s))[1:]
+		// @ assert sl.View(s) === sl.View(olds)[idx:]
+		// @ assert sl.View(s)[l:] === sl.View(olds)[idx+l:]
+		// @ unfold acc(sl.Bytes(s, 0, len(s)), R45)
 		t[i] = r
 		i++
 		s = s[l:]
 		// @ idx += l
-		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R40)
+		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R45)
 		// @ fold rsl.Runes(t, 0, len(t))
+		// @ assert utf8.Codepoints(sl.View(olds)[idx:]) == codepoints[i:]
 	}
+	// @ assert rsl.View(t) == codepoints
 	return t
 }
 

@@ -11,12 +11,11 @@ import (
 //
 // See utf8.DecodeRune
 ghost
-pure
-ensures 0 < len(s) ==> 0 < len(res)
-ensures 0 == len(s) ==> 0 == len(res)
+ensures  0 < len(s) ==> 0 < len(res)
+ensures  0 == len(s) ==> 0 == len(res)
 trusted
 decreases
-func Codepoints(s []byte) (res seq[rune])
+pure func Codepoints(s seq[byte]) (res seq[rune])
 
 
 const (
@@ -29,27 +28,30 @@ const (
 // AppendRune appends the UTF-8 encoding of r to the end of p and
 // returns the extended buffer. If the rune is out of range,
 // it appends the encoding of [RuneError].
+preserves sl.Bytes(p, 0, len(p))
+trusted
+decreases
 func AppendRune(p []byte, r rune) []byte
 
-preserves acc(sl.Bytes(p, 0, len(p)), R40)
-ensures len(p) > 0 ==> 1 <= size && size <= len(p)
-ensures len(p) == 0 ==> size == 0
-ensures len(p) > 0 ==> Codepoints(p)[0] == r && Codepoints(p[size:]) == Codepoints(p)[1:]
+preserves acc(sl.Bytes(p, 0, len(p)), R50)
+ensures  len(p) > 0 ==> 1 <= size && size <= len(p)
+ensures  len(p) == 0 ==> size == 0
+ensures  len(p) > 0 ==> Codepoints(sl.View(p))[0] == r && Codepoints(sl.View(p)[size:]) == Codepoints(sl.View(p))[1:]
 trusted
 decreases
 func DecodeRune(p []byte) (r rune, size int)
 
-preserves forall i int :: {&p[i]} 0 <= i && i < len(p) ==> acc(&p[i], R50)
-ensures 1 <= size && size <= len(p)
+preserves acc(sl.Bytes(p, 0, len(p)), R50)
+ensures   1 <= size && size <= len(p)
 trusted
 decreases
 func DecodeLastRune(p []byte) (r rune, size int)
+
 trusted
 decreases
 func RuneLen(r rune) int
 
-requires forall i int :: {&p[i]} 0 <= i && i < len(p) ==> acc(&p[i])
-ensures forall i int :: {&p[i]} 0 <= i && i < len(p) ==> acc(&p[i])
+preserves sl.Bytes(p, 0, len(p))
 ensures 0 <= n && n <= UTFMax
 trusted
 decreases
@@ -58,7 +60,7 @@ func EncodeRune(p []byte, r rune) (n int)
 preserves acc(sl.Bytes(p, 0, len(p)), R50)
 ensures 0 <= res && res < len(p)
 ensures len(p) > 0 ==> res > 0
-ensures res == len(Codepoints(p))
+ensures res == len(Codepoints(sl.View(p)))
 ensures len(indices) == res
 ensures forall i int :: {i in indices} i in indices ==> 0 <= i && i < len(p)
 trusted
