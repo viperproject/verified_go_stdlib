@@ -75,15 +75,13 @@ const (
 ghost
 decreases
 ensures res <= a && res <= b && (res == a || res == b)
-pure func
-MinInt(a, b int) (res int) {
+pure func MinInt(a, b int) (res int) {
 	return a < b ? a : b;
 }
 
 ghost
 decreases
-pure func
-MaxInt(a, b int) (res int) {
+pure func MaxInt(a, b int) (res int) {
 	return a < b ? a : b;
 }
 
