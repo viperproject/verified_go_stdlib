@@ -72,9 +72,10 @@ func HashStrRevBytes(sep []byte) (uint32, uint32)
 
 preserves acc(sl.Bytes(s, 0, len(s)), R50)
 preserves acc(sl.Bytes(sep, 0, len(sep)), R50)
-ensures 0 <= res && res + len(sep) <= len(s)
+ensures -1 <= res && res + len(sep) <= len(s)
 ensures res != -1 ==> sl.View(s)[res:res+len(sep)] == sl.View(sep)
-ensures res == -1 ==> !exists i int :: {sl.View(s)[i:i+len(sep)]} sl.View(s)[i:i+len(sep)] == sl.View(sep)
+ensures res == -1 ==>
+	forall i int :: {sl.View(s)[i:i+len(sep)]} InRangeInc(i, 0, len(s)-len(sep)) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
 ensures res != -1 ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i < res ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
 trusted
 decreases

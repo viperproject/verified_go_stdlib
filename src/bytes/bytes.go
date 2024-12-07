@@ -2303,6 +2303,7 @@ func Index(s, sep []byte) (res int) {
 			if p1 && Equal(s[i:i+n], sep) {
 				// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+				// }
 				//gobra:endrewrite 7bafdf7e4e13158c42c57d2807162d86acab287627cdfddb8689900171421936
 				return i
 			}
@@ -2398,9 +2399,15 @@ func Index(s, sep []byte) (res int) {
 			// @ assert i != -1 ==> forall j int :: {sl.View(s)[j:j+len(sep)]} 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
 			return i
 		}
+		// @ assert !(p1 && sl.View(s[i:i+len(vsep)]) == vsep)
+		// @ lemmaViewSubslice(s, i, i+len(vsep))
+		// @ assert !(p1 && vs[i:i+len(vsep)] == vsep)
 		// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
+		// @ lemmaIndexStepOne(vs, vsep, i)
 		i++
+		// @ assert forall k int :: { vs[k:k+len(sep)] } 0 <= k && k < i ==> vs[k:k+len(sep)] != vsep
 		fails++
+		// @ assert forall k int :: { vs[k:k+len(sep)] } 0 <= k && k < i ==> vs[k:k+len(sep)] != vsep
 		if fails >= 4+i>>4 && i < t {
 			// Give up on IndexByte, it isn't skipping ahead
 			// far enough to be better than Rabin-Karp.
@@ -2410,11 +2417,33 @@ func Index(s, sep []byte) (res int) {
 			// we should cutover at even larger average skips,
 			// because Equal becomes that much more expensive.
 			// This code does not take that effect into account.
-			// @ assert forall j int :: {&s[i:][j]} 0 <= j && j < len(s[i:]) ==> &s[i:][j] == &s[j+i]
+			// @ assert forall k int :: { vs[k:k+len(sep)] } 0 <= k && k < i ==> vs[k:k+len(sep)] != vsep
+			// @ SubSliceOverlaps(s, i, len(s))
+			// @ assert forall k int :: { vs[k:k+len(sep)] } 0 <= k && k < i ==> vs[k:k+len(sep)] != vsep
 			// @ fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 			j := bytealg.IndexRabinKarpBytes(s[i:], sep)
+			/* @ ghost if j == -1 {
+				assert forall k int :: {sl.View(s[i:])[k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s[i:])[k:k+len(sep)] != sl.View(sep)
+				lemmaViewEqualsIndex(s, sl.View(sep), i)
+
+				assert forall k int :: { vs[k:k+len(sep)] } 0 <= k && k < i ==> vs[k:k+len(sep)] != vsep
+				assert forall k int :: {sl.View(s[i:])[k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s[i:])[k:k+len(sep)] != sl.View(sep)
+				lemmaViewSubslice(s, i, len(s))
+				lemmaViewEqualsIndex(s, sl.View(sep), i)
+				assert forall k int :: {sl.View(s)[i:][k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s)[i:][k:k+len(sep)] != sl.View(sep)
+				assert 2 <= len(s)
+				assert 0 < i
+
+				assert forall k int :: {vs[k:k+len(vsep)]} InRange(k, 0, i) ==> vs[k:k+len(vsep)] != vsep
+
+
+				assert forall k int :: {vs[i:][k:k+len(vsep)]} InRangeInc(k, 0, len(vs[i:])) ==> vs[i:][k:k+len(vsep)] != vsep
+				lemmaIndexNotFound(sl.View(s), sl.View(sep), i)
+				}
+			@ */
 			// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 			if j < 0 {
+				// @ assert forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 				return -1
 			}

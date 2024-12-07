@@ -469,3 +469,11 @@ func lemmaViewEqualsIndex(s []byte, sep seq[byte], i int) {
 		lemmaManuallyTriggerForall(s, sep, i, j+1)
 	}
 }
+
+
+ghost
+requires forall k int :: { s[k:k+len(sep)] } 0 <= k && k < i ==> s[k:k+len(sep)] != sep
+requires s[i:i+len(sep)] != sep
+ensures  forall k int :: { s[k:k+len(sep)] } 0 <= k && k < i+1 ==> s[k:k+len(sep)] != sep
+decreases
+func lemmaIndexStepOne(s, sep seq[byte], i int) { }
