@@ -28,23 +28,29 @@ func Cutover(n int) int
 requires 2 <= len(b) && len(b) <= MaxLen
 preserves acc(sl.Bytes(a, 0, len(a)), R45)
 preserves acc(sl.Bytes(b, 0, len(b)), R45)
-ensures 0 <= res && res + len(b) <= len(a)
+ensures -1 <= res && res + len(b) <= len(a)
 ensures res != -1 ==> sl.View(a)[res:res+len(b)] == sl.View(b)
-ensures res == -1 ==> !exists i int :: {sl.View(a)[i:i+len(b)]} sl.View(a)[i:i+len(b)] == sl.View(b)
-ensures res != -1 ==> forall i int :: {sl.View(a)[i:i+len(b)]} 0 <= i && i < res ==> sl.View(a)[i:i+len(b)] != sl.View(b)
+ensures res == -1 ==>
+	forall i int :: {sl.View(a)[i:i+len(b)]} InRangeInc(i, 0, len(a)-len(b)) ==> sl.View(a)[i:i+len(b)] != sl.View(b)
+ensures res != -1 ==>
+	forall i int :: {sl.View(a)[i:i+len(b)]} 0 <= i && i < res ==> sl.View(a)[i:i+len(b)] != sl.View(b)
 trusted
 decreases
 func Index(a, b []byte) (res int)
 
+requires false
 func IndexString(a, b string) int
 
 preserves acc(sl.Bytes(b, 0, len(b)), R50)
-ensures 0 <= res && res < len(b)
-ensures res != -1 == ((forall i int :: {sl.View(b)[i]} 0 <= i && i < res ==> sl.View(b)[i] != c) && sl.View(b)[res] == c)
+ensures -1 <= res && res < len(b)
+ensures res != -1 ==> ((forall i int :: {sl.View(b)[i]} 0 <= i && i < res ==> sl.View(b)[i] != c) && sl.View(b)[res] == c)
+ensures (forall i int :: {sl.View(b)[i]} 0 <= i && i < res ==> sl.View(b)[i] != c) ==> res != -1
 ensures res == -1 == (forall i int :: {sl.View(b)[i]} 0 <= i && i < len(b) ==> sl.View(b)[i] != c)
 trusted
 decreases
 func IndexByte(b []byte, c byte) (res int)
+
+requires false
 trusted
 decreases
 func IndexByteString(s string, c byte) int
@@ -59,6 +65,7 @@ var MaxLen int
 
 const PrimeRK = 16777619
 
+preserves acc(sl.Bytes(sep, 0, len(sep)), R50)
 trusted
 decreases
 func HashStrRevBytes(sep []byte) (uint32, uint32)

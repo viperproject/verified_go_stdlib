@@ -1084,7 +1084,12 @@ func Repeat(b []byte, count int) (res []byte) {
 		bp *= 2
 		// @ assert sl.View(nb)[:MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
 		// @ assert len(sl.View(b)) == len(b)
-		// @ lemmaSubstV(sl.View(nb), sl.View(b), count, i*2, i0)
+		// @ assert MinInt(count, i0) == MinInt(count, i * 2)
+		// @ assert MinInt(count, i0) * len(b) == MinInt(count, i * 2) * len(b)
+		// @ assert sl.View(nb)[:MinInt(count, i0) * len(b)] == sl.View(nb)[:MinInt(count, i * 2) * len(b)]
+		// @ assert MinInt(count, i0) == MinInt(count, i * 2)
+		// @ assert bytes.Repeat(sl.View(b), MinInt(count, i*2)) == bytes.Repeat(sl.View(b), MinInt(count, i0))
+		// @ LemmaEqTransitive_seq(sl.View(nb)[:MinInt(count, i*2) * len(b)], bytes.Repeat(sl.View(b), MinInt(count, i*2)), bytes.Repeat(sl.View(b), MinInt(count, i0)))
 		// @ assert sl.View(nb)[:MinInt(count, i0) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i0))
 		// @ i *= 2
 		// @ assert i0 == i
@@ -2313,6 +2318,13 @@ func Index(s, sep []byte) (res int) {
 				r := bytealg.Index(s[i:], sep)
 				// @ assert r != -1 ==> forall j int :: {sl.View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s[i:])[j:j+len(sep)] != sl.View(sep)
 				// @ ghost if r != -1 { lemmaViewSliceSepEquals(s, sl.View(sep), i, r) }
+				/* @ ghost if r == -1 {
+
+					assert forall k int :: {sl.View(s[i:])[k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s[i:])[k:k+len(sep)] != sl.View(sep)
+					lemmaViewSubslice(s, i, len(s))
+					lemmaViewEqualsIndex(s, sl.View(sep), i)
+					}
+				@ */
 				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 				if r >= 0 {
@@ -2329,6 +2341,11 @@ func Index(s, sep []byte) (res int) {
 
 					return r + i
 				}
+				// @ assert r == -1
+				// @ assert forall k int :: {sl.View(s)[i:][k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s)[i:][k:k+len(sep)] != sl.View(sep)
+				// @ assert forall k int :: {sl.View(s)[k:k+len(sep)]} InRange(k, 0, i) ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
+				// @ lemmaIndexNotFound(sl.View(s), sl.View(sep), i)
+				// @ assert forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
 				// @ assert -1 == -1 ==> forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
 				return -1
 			}
