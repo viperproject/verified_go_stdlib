@@ -950,7 +950,7 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ assert len(b) <= len(nb)
 	// @ assert bp == len(b)
 	// @ assert sl.View(nb)[:bp] == sl.View(b)
-	// @ lemmaRepeatOnce(sl.View(b))
+	// @ bytes.LemmaRepeatOnce(sl.View(b))
 	// @ assert bytes.Repeat(sl.View(b), 1) == sl.View(b)
 
 	// @ invariant 0 < count
@@ -1040,7 +1040,7 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ assert prev == bytes.Repeat(sl.View(b), i)
 		// @ doubled := (prev ++ prev)[:count * len(b)]
 		// @ assert doubled == sl.View(nb)[: MinInt(count, i*2) * len(b)]
-		// @ lemmaRepeat_2n(sl.View(b), i)
+		// @ bytes.LemmaRepeatDoubled(sl.View(b), i)
 		// @ assert bytes.Repeat(sl.View(b), 2 * i) == bytes.Repeat(sl.View(b), i) ++ bytes.Repeat(sl.View(b), i)
 		// @ assert i <= count
 		// @ assert sl.View(nb)[:i * len(b)] == bytes.Repeat(sl.View(b), i)

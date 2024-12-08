@@ -49,57 +49,6 @@ func lemmaCountAux(s, sep seq[byte], indices set[int], idx int) {
 
 // Repeat
 
-ghost
-ensures bytes.Repeat(b, 1) == b
-decreases
-func lemmaRepeatOnce(b seq[byte]) {
-	assert bytes.Repeat(b, 1) == b ++ bytes.Repeat(b, 0)
-}
-
-ghost
-requires n > 0
-ensures bytes.Repeat(b, n) == bytes.Repeat(b, n-1) ++ b
-decreases n
-func lemmaRepeatFlip(b seq[byte], n int) {
-	if n == 1 {
-		assert bytes.Repeat(b, n-1) == seq[byte]{}
-	} else {
-		assert bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n-1)
-		lemmaRepeatFlip(b, n-1)
-		assert bytes.Repeat(b, n-1) == bytes.Repeat(b, n-2) ++ b
-	}
-}
-
-ghost
-requires n >= 0
-ensures  b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n) ++ b
-decreases
-func lemmaRepeatCommutative(b seq[byte], n int) {
-	assert b ++ bytes.Repeat(b, n) == bytes.Repeat(b, n+1)
-	lemmaRepeatFlip(b, n+1)
-}
-
-ghost
-requires n >= 0
-ensures  bytes.Repeat(b, 2 * n) == bytes.Repeat(b, n) ++ bytes.Repeat(b, n)
-decreases n
-func lemmaRepeat_2n(b seq[byte], n int) {
-	if n != 0 {
-		assert bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n - 1)
-		assert bytes.Repeat(b, n) ++ bytes.Repeat(b, n) == b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1)
-		// order of repeating doesn't matter because it's always the same element that is repeated
-		assert b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1) == b ++ (bytes.Repeat(b, n - 1) ++ b) ++ bytes.Repeat(b, n - 1)
-		lemmaRepeatCommutative(b, n - 1)
-		assert b ++ (bytes.Repeat(b, n - 1) ++ b) ++ bytes.Repeat(b, n - 1) == b ++ (b ++ bytes.Repeat(b, n - 1)) ++ bytes.Repeat(b, n - 1)
-		assert b ++ bytes.Repeat(b, n - 1) ++ b ++ bytes.Repeat(b, n - 1) == b ++ b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
-		lemmaRepeat_2n(b, n - 1)
-		assert bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1) == bytes.Repeat(b, 2 * (n - 1))
-		assert bytes.Repeat(b, 2 * n - 1) == b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
-		assert bytes.Repeat(b, 2 * n) == b ++ b ++ bytes.Repeat(b, n - 1) ++ bytes.Repeat(b, n - 1)
-	} else {
-		assert bytes.Repeat(b, 2 * 0) == bytes.Repeat(b, 0) ++ bytes.Repeat(b, 0)
-	}
-}
 
 ghost
 requires bp < lnb
@@ -177,19 +126,6 @@ func lemmaDouble(nb seq[byte], b seq[byte], i, bp, count, nCopied int) {
 	}
 }
 
-ghost
-requires n >= 0
-ensures  len(bytes.Repeat(s, n)) == len(s) * n
-decreases n
-func lemmaRepeatLength(s seq[byte], n int) {
-	switch {
-	case n == 0:
-		assert len(bytes.Repeat(s, n)) == 0
-	default:
-		assert bytes.Repeat(s, n) == s ++ bytes.Repeat(s, n-1)
-		lemmaRepeatLength(s, n-1)
-	}
-}
 
 
 ghost
@@ -214,12 +150,12 @@ func lemmaSlicingRepeat(s seq[byte], a, b int) {
 		assert bytes.Repeat(s, 0) == seq[byte]{}
 	case a == b:
 		assert bytes.Repeat(s, a) == s ++ bytes.Repeat(s, a-1)
-		lemmaRepeatLength(s, a)
+		bytes.LemmaRepeatLength(s, a)
 		assert len(r) == len(s) * a
 		assert len(r) == len(s) * b
 		assert bytes.Repeat(s, a)[: b * len(s)] == bytes.Repeat(s, MinInt(a, b))
 	case a <= b:
-		lemmaRepeatLength(s, a)
+		bytes.LemmaRepeatLength(s, a)
 		assert len(r) == len(s) * a
 		assert a <= b
 		LemmaMulInjLeq(a, b, len(s))
