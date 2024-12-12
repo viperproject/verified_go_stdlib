@@ -37,7 +37,8 @@ func Equal(a, b []byte) (res bool) {
 	//gobra:cont 	return string(a) == string(b)
 	//gobra:end-old-code bb601b0360eb4c70921af43549f6965f5b00ec78f7f6b39abd84a83639cd2a48
 	ret := /* @ unfolding acc(sl.Bytes(a, 0, len(a)), R41) in @ */ string(a) == /* @ unfolding acc(sl.Bytes(b, 0, len(b)), R41) in @ */ string(b)
-	// @ stringEqualsImplViewEquals(ret, a, b, R41)
+	// @ stringEqualsImplViewEquals(a, b)
+
 	return ret
 	//gobra:endrewrite bb601b0360eb4c70921af43549f6965f5b00ec78f7f6b39abd84a83639cd2a48
 }

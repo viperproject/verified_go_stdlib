@@ -17,17 +17,11 @@ pure func String(b []byte) string  {
 
 // We cannot yet prove this with the current incomplete encoding of strings
 ghost
-requires 0 < p
-requires acc(sl.Bytes(a, 0, len(a)), p)
-requires acc(sl.Bytes(b, 0, len(b)), p)
-requires r == (String(a) == String(b))
-ensures  acc(sl.Bytes(a, 0, len(a)), p)
-ensures  acc(sl.Bytes(b, 0, len(b)), p)
-ensures  r == (sl.View(a) == sl.View(b))
-trusted
+requires acc(sl.Bytes(a, 0, len(a)), _)
+requires acc(sl.Bytes(b, 0, len(b)), _)
+ensures (String(a) == String(b)) == (sl.View(a) == sl.View(b))
 decreases
-func stringEqualsImplViewEquals(r bool, a, b []byte, p perm)
-
+pure func stringEqualsImplViewEquals(a, b []byte) bool
 
 
 // Count
