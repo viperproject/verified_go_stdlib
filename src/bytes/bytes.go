@@ -60,9 +60,6 @@ func Compare(a, b []byte) int {
 //
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
-// @ ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])
-// @ trusted // TODO
-//
 // @ decreases
 func explode(s []byte, n int) (res [][]byte) {
 	if n <= 0 || n > len(s) {
@@ -71,15 +68,33 @@ func explode(s []byte, n int) (res [][]byte) {
 	a := make([][]byte, n)
 	var size int
 	na := 0
+	// @ ghost olds := s
+	// @ ghost idx := 0
+
+	// @ invariant InRangeInc(na, 0, len(a))
+	// @ invariant len(a) == n
+	// @ invariant na <= n
+	// @ invariant na != 0 ==> n > na
+	// @ invariant InRangeInc(idx, 0, len(olds))
+	// @ invariant olds[idx:] === s
+	// @ invariant acc(sl.Bytes(olds, 0, len(olds)), R49)
+	// @ invariant forall i int :: {&a[i]} InRange(i, 0, len(a)) ==> acc(&a[i])
+	// @ decreases len(olds)-idx
 	for len(s) > 0 {
 		if na+1 >= n {
 			a[na] = s
 			na++
 			break
 		}
+		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R49)
+		// @ SubSliceOverlaps(olds, idx, len(olds))
+		// @ fold acc(sl.Bytes(s, 0, len(s)), R49)
 		_, size = utf8.DecodeRune(s)
+		// @ unfold acc(sl.Bytes(s, 0, len(s)), R49)
+		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R49)
 		a[na] = s[0:size:size]
 		s = s[size:]
+		// @ idx += size
 		na++
 	}
 	return a[0:na]
