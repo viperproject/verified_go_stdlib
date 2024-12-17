@@ -7,6 +7,7 @@ import (
 	sl "gobra-libs/byteslice"
 	bytes "gobra-libs/bytes"
 	. "bytes/spec"
+	"unicode/utf8"
 )
 
 decreases
@@ -26,17 +27,162 @@ pure func stringEqualsImplViewEquals(a, b []byte) bool
 
 // Count
 
+/*
+
 ghost
-requires InRangeInc(idx, 0, len(s))
-requires forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) ==> !(InRangeInc(j, 0, idx - len(sep))) || s[j:j+len(sep)] != sep || SetContainsInRange(indices, j-len(sep), j)
-requires forall j int :: {s[idx:][j:j+len(sep)]} InRangeInc(j, 0, len(s[idx:]) - len(sep)) ==> s[idx:][j:j+len(sep)] != sep
-ensures  forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) ==> ( !InRangeInc(j, 0, len(s) - len(sep)) || s[j:j+len(sep)] != sep || SetContainsInRange(indices, j-len(sep), j))
+decreases len(s)
+pure func SpecCount(s, sep seq[byte]) (res int) {
+	return len(sep) == 0 ?
+		len(utf8.Codepoints(s)) + 1 :
+		len(s) < len(sep) ?
+			0 :
+			s[:len(sep)] == sep ?
+				1 + SpecCount(s[len(sep):], sep) :
+				SpecCount(s[1:], sep)
+}
+
+*/
+
+ghost
+requires len(sep) > 0
+requires 0 <= i
+ensures forall j int :: {j in res} j in res ==> InRangeInc(j, i, len(s)-len(sep)) && s[j:j+len(sep)] == sep
+ensures forall j, k int :: {j in res, k in res} j in res && k in res && j < k ==> j + len(sep) <= k
+decreases len(s) - i
+pure func SpecCountIndices(s, sep seq[byte], i int) (res set[int]) {
+	return i >= len(s) ?
+		set[int]{} :
+		s[i:i+len(sep)] == sep ?
+			set[int]{i} union SpecCountIndices(s, sep, i + len(sep)) :
+			SpecCountIndices(s, sep, i + 1)
+}
+
+ghost
+requires forall j int :: {j in indices} j in indices ==> 0 <= j && j < len(b)
+requires forall j int :: {j in indices} j in indices ==> ( b[j] == c)
+requires forall j int :: {j in indices} !(j in indices) ==> ( j < 0 || len(b) <= j || b[j] != c)
+ensures indices == SpecCountIndices(b, seq[byte]{c}, 0)
 decreases
-func lemmaCountAux(s, sep seq[byte], indices set[int], idx int) {
-	assume forall j int :: {s[j:j+len(sep)]} InRangeInc(j, idx, len(s) - len(sep)) ==> s[j:j+len(sep)] != sep
-	assert forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) && InRangeInc(j, 0, idx - len(sep)) && !SetContainsInRange(indices, j-len(sep), j) ==> s[j:j+len(sep)] != sep
-	assert forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) && InRangeInc(j, idx, len(s) - len(sep)) && !SetContainsInRange(indices, j-len(sep), j) ==> s[j:j+len(sep)] != sep
-	assume forall j int :: { j in indices }{ s[j:j+len(sep)] } !(j in indices) && InRangeInc(j, 0, len(s) - len(sep)) && !SetContainsInRange(indices, j-len(sep), j) ==> s[j:j+len(sep)] != sep
+func lemmaBytealgCount(indices set[int], b seq[byte], c byte) {
+	TODO() // before implementing this lemma, we should consider changing the specs of bytealg.Count to use SpecCountIndices
+}
+
+// currently unused but might be interesting to expose
+ghost
+requires len(sep) > 0
+requires InRangeInc(idx, 0, len(s))
+requires 0 <= i
+requires idx in SpecCountIndices(s, sep, i)
+ensures SpecCountIndices(s, sep, i) == SpecCountIndices(s[:idx], sep, i) union SpecCountIndices(s, sep, idx)
+decreases idx - i
+func lemmaSpecCountIndicesSplit(s, sep seq[byte], idx, i int) {
+	assert InRangeInc(idx, 0, len(s)-len(sep)) && s[idx:idx+len(sep)] == sep
+
+	if idx == 0 {
+		return
+	}
+
+	if idx == i {
+		assert s[i:i+len(sep)] == sep
+
+		return
+	}
+
+	if s[i:i+len(sep)] == sep {
+		assert SpecCountIndices(s, sep, i) == set[int]{i} union SpecCountIndices(s, sep, i + len(sep))
+		assert SpecCountIndices(s[:idx], sep, i) == set[int]{i} union SpecCountIndices(s[:idx], sep, i + len(sep))
+		lemmaSpecCountIndicesSplit(s, sep, idx, i+len(sep))
+		return
+	}
+
+			// SpecCountIndices(s, sep, i + 1)
+
+	assert SpecCountIndices(s, sep, i) == SpecCountIndices(s, sep, i + 1)
+	assert SpecCountIndices(s[:idx], sep, i) == SpecCountIndices(s[:idx], sep, i + 1)
+	lemmaSpecCountIndicesSplit(s, sep, idx, i+1)
+}
+
+
+ghost
+requires len(sep) > 0
+requires InRangeInc(n, 0, len(s))
+requires InRangeInc(idx, 0, n)
+requires InRangeInc(i, 0, len(s))
+requires forall j int :: {s[j:j+len(sep)]} idx <= j && j + len(sep) <= n ==> s[j:j+len(sep)] != sep
+requires idx == 0 || idx-len(sep) in indices
+requires SpecCountIndices(s[:idx], sep, 0) == indices
+requires !(idx - len(sep) < i && i < idx)
+ensures SpecCountIndices(s[:idx], sep, i) == SpecCountIndices(s[:n], sep, i)
+decreases n - i
+func lemmaCountSepNotFoundInTail(s, sep seq[byte], indices set[int], idx, i, n int) {
+	switch {
+	case i >= n:
+	case s[:idx][i:i+len(sep)] == sep:
+		assert i < idx
+		assert i <= idx-len(sep)
+		assert s[:idx][i:i+len(sep)] == s[i:i+len(sep)]
+		assert SpecCountIndices(s[:idx], sep, i) == set[int]{i} union SpecCountIndices(s[:idx], sep, i + len(sep))
+		assert SpecCountIndices(s, sep, i) == set[int]{i} union SpecCountIndices(s, sep, i + len(sep))
+
+		// TODO: this i will not be in indices because SpecCountIndices(s, sep, 0) would skip this i
+		assume !InRange(i+len(sep), idx-len(sep)+1, idx)
+
+		lemmaCountSepNotFoundInTail(s, sep, indices, idx, i + len(sep), n)
+	case i >= idx && i + len(sep) > n:
+	case i >= idx:
+		assert i + len(sep) <= n
+		assert s[i:i+len(sep)] != sep
+		lemmaCountSepNotFoundInTail(s, sep, indices, idx, i + 1, n)
+	case i < idx - len(sep):
+		assert s[i:i+len(sep)] != sep
+		assert SpecCountIndices(s[:idx], sep, i) == SpecCountIndices(s[:idx], sep, i + 1)
+		assert SpecCountIndices(s, sep, i) == SpecCountIndices(s, sep, i + 1)
+		lemmaCountSepNotFoundInTail(s, sep, indices, idx, i + 1, n)
+	default:
+		assert i < idx
+		assert i >= idx - len(sep)
+		assert i != idx-len(sep)
+		assert idx - len(sep) < i
+		assert false // contradiction
+	}
+}
+
+
+ghost
+requires len(sep) > 0
+requires InRangeInc(idx, 0, len(s))
+requires InRangeInc(i, 0, len(s))
+requires InRangeInc(k, 0, len(s[idx:])-len(sep))
+requires forall j int :: {s[idx:][j:j+len(sep)]} 0 <= j && j < k ==> s[idx:][j:j+len(sep)] != sep
+requires s[idx+k:idx+k+len(sep)] == sep
+requires idx == 0 || idx-len(sep) in indices
+requires SpecCountIndices(s[:idx], sep, 0) == indices
+ensures SpecCountIndices(s[:idx+k+len(sep)], sep, i) == SpecCountIndices(s[:idx], sep, i) union set[int]{idx+k}
+decreases
+func lemmaCountSepFound(s, sep seq[byte], indices set[int], idx, k, i int) {
+
+	if idx - len(sep) < i && i < idx {
+		// TODO: i cannot be in this range, because SpecCountIndices would skip it
+		assume !(idx-len(sep) in indices)
+
+		assert false // contradiction
+	}
+
+	n := idx+k+len(sep)
+
+	assert forall j int :: {s[idx:][j:j+len(sep)]} 0 <= j && j < k ==> s[idx:][j:j+len(sep)] != sep
+	assert forall j int :: {s[idx:][j:j+len(sep)]} 0 <= j && j <= k-1 ==> s[idx:][j:j+len(sep)] != sep
+	lemmaSepNotEquals(s, sep, idx, k-1)
+	assert forall j int :: {s[j:j+len(sep)]} idx <= j && j+len(sep) < idx+k+len(sep) ==> s[j:j+len(sep)] != sep
+	assert SpecCountIndices(s[:idx], sep, 0) == indices
+	assert idx - len(sep) >= i || i >= idx
+	lemmaCountSepNotFoundInTail(s, sep, indices, idx, i, n-1)
+
+
+	assert SpecCountIndices(s[:idx], sep, i) == SpecCountIndices(s[:n-1], sep, i)
+
+	// TODO: this should hold
+	assume SpecCountIndices(s[:n], sep, i) == SpecCountIndices(s[:n-1], sep, i) union set[int]{idx+k}
 }
 
 
@@ -256,6 +402,26 @@ func lemmaViewSliceSepEquals(s []byte, sep seq[byte], i, r int) {
 		fold acc(sl.Bytes(s, 0, len(s)), R50/2)
 		fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R50/2)
 	}
+}
+
+
+ghost
+requires 0 <= a
+requires forall j int :: {s[a:][j:j+len(sep)]} 0 <= j && j <= b ==> s[a:][j:j+len(sep)] != sep
+ensures  forall j int :: {s[j:j+len(sep)]} a <= j && j <= a+b ==> s[j:j+len(sep)] != sep
+decreases
+func lemmaSepNotEquals(s, sep seq[byte], a, b int) {
+	if b < 0 {
+		return
+	}
+	invariant InRangeInc(k, a, a+b+1)
+	invariant forall i0 int :: { s[i0:i0+len(sep)] } InRange(i0, a, k) ==>
+		s[i0:i0+len(sep)] != sep
+	decreases a+b+1-k
+	for k := a; k < a+b+1; k++ {
+		assert s[k:k+len(sep)] == s[a:][k-a:k-a+len(sep)]
+	}
+
 }
 
 ghost
