@@ -905,7 +905,7 @@ func HasSuffix(s, suffix []byte) (res bool) {
 // according to the mapping function. If mapping returns a negative value, the character is
 // dropped from the byte slice with no replacement. The characters in s and the
 // output are interpreted as UTF-8-encoded code points.
-// @ requires false
+// @ requires acc(sl.Bytes(s, 0, len(s)), R45)
 // @ trusted
 // @ decreases
 func Map(mapping func(r rune) rune, s []byte) []byte {
@@ -1156,6 +1156,7 @@ func Repeat(b []byte, count int) (res []byte) {
 // ToUpper returns a copy of the byte slice s with all Unicode letters mapped to
 // their upper case.
 //
+// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
@@ -1210,9 +1211,12 @@ func ToUpper(s []byte) []byte {
 // ToLower returns a copy of the byte slice s with all Unicode letters mapped to
 // their lower case.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+// @ trusted
 func ToLower(s []byte) (res []byte) {
 	isASCII, hasUpper := true, false
 	// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
@@ -1262,17 +1266,23 @@ func ToLower(s []byte) (res []byte) {
 
 // ToTitle treats s as UTF-8-encoded bytes and returns a copy with all the Unicode letters mapped to their title case.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func ToTitle(s []byte) []byte { return Map(unicode.ToTitle, s) }
 
 // ToUpperSpecial treats s as UTF-8-encoded bytes and returns a copy with all the Unicode letters mapped to their
 // upper case, giving priority to the special casing rules.
 //
+// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+// @ trusted
 func ToUpperSpecial(c unicode.SpecialCase, s []byte) []byte {
 	return Map(c.ToUpper, s)
 }
@@ -1280,9 +1290,13 @@ func ToUpperSpecial(c unicode.SpecialCase, s []byte) []byte {
 // ToLowerSpecial treats s as UTF-8-encoded bytes and returns a copy with all the Unicode letters mapped to their
 // lower case, giving priority to the special casing rules.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func ToLowerSpecial(c unicode.SpecialCase, s []byte) []byte {
 	return Map(c.ToLower, s)
 }
@@ -1290,9 +1304,13 @@ func ToLowerSpecial(c unicode.SpecialCase, s []byte) []byte {
 // ToTitleSpecial treats s as UTF-8-encoded bytes and returns a copy with all the Unicode letters mapped to their
 // title case, giving priority to the special casing rules.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func ToTitleSpecial(c unicode.SpecialCase, s []byte) []byte {
 	return Map(c.ToTitle, s)
 }
@@ -1383,9 +1401,13 @@ func isSeparator(r rune) bool {
 // Deprecated: The rule Title uses for word boundaries does not handle Unicode
 // punctuation properly. Use golang.org/x/text/cases instead.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func Title(s []byte) []byte {
 	// Use a closure here to remember state.
 	// Hackish but effective. Depends on Map scanning in order and calling
@@ -1413,6 +1435,8 @@ func Title(s []byte) []byte {
 // TrimLeftFunc treats s as UTF-8-encoded bytes and returns a subslice of s by slicing off
 // all leading UTF-8-encoded code points c that satisfy f(c).
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ ensures (len(res) == 0) == (idx == -1)
@@ -1422,6 +1446,8 @@ func Title(s []byte) []byte {
 // @ ensures res != nil ==> (forall j int :: {&s[idx:][j]} 0 <= j && j < len(s[idx:]) ==> &s[idx:][j] == &res[j])
 //
 // @ decreases
+//
+// @ trusted
 func TrimLeftFunc(s []byte, f func(r rune) bool) (res []byte /*@, ghost idx int @*/) {
 	i := indexFunc(s, f, false)
 	if i == -1 {
@@ -1483,11 +1509,15 @@ func TrimPrefix(s, prefix []byte) []byte {
 // TrimSuffix returns s without the provided trailing suffix string.
 // If s doesn't end with suffix, s is returned unchanged.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(suffix, 0, len(suffix)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func TrimSuffix(s, suffix []byte) []byte {
 	if HasSuffix(s, suffix) {
 		return s[:len(s)-len(suffix)]
@@ -1499,9 +1529,13 @@ func TrimSuffix(s, suffix []byte) []byte {
 // It returns the byte index in s of the first Unicode
 // code point satisfying f(c), or -1 if none do.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func IndexFunc(s []byte, f func(r rune) bool) int {
 	return indexFunc(s, f, true)
 }
@@ -1549,7 +1583,6 @@ func indexFunc(s []byte, f func(r rune) bool, truth bool) (res int) {
 // truth==false, the sense of the predicate function is
 // inverted.
 //
-// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ ensures -1 <= res && res < len(s)
@@ -1614,7 +1647,6 @@ func makeASCIISet(chars string) (asc asciiSet, ok bool) {
 
 // contains reports whether c is inside the set.
 //
-// @ requires false
 // @ trusted
 // @ decreases
 //
@@ -1632,7 +1664,6 @@ func (asc *asciiSet) contains(c byte) bool {
 // containsRune is a simplified version of strings.ContainsRune
 // to avoid importing the strings package.
 // We avoid bytes.ContainsRune to avoid allocating a temporary copy of s.
-// @ requires false
 // @ trusted
 // @ decreases
 func containsRune(s string, r rune) bool {
@@ -1889,9 +1920,13 @@ func trimRightUnicode(s []byte, cutset string) []byte {
 // TrimSpace returns a subslice of s by slicing off all leading and
 // trailing white space, as defined by Unicode.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ decreases
+//
+// @ trusted
 func TrimSpace(s []byte) (res []byte) {
 	// Fast path for ASCII: look for the first ASCII non-space byte
 	start := 0
@@ -2116,6 +2151,8 @@ func Replace(s, oldval, newval []byte, n int) (res []byte) {
 // and after each UTF-8 sequence, yielding up to k+1 replacements
 // for a k-rune slice.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(oldval, 0, len(oldval)), R40)
@@ -2123,6 +2160,8 @@ func Replace(s, oldval, newval []byte, n int) (res []byte) {
 // @ preserves acc(sl.Bytes(newval, 0, len(newval)), R40)
 //
 // @ decreases
+//
+// @ trusted
 //
 //gobra:rewrite 97c2ede7687475e639eb6cf004d3abccbd534c90686609842d241e0faf3710c5
 //gobra:cont func ReplaceAll(s, old, new []byte) []byte {
