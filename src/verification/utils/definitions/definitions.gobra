@@ -111,10 +111,3 @@ requires 0 <= low && low <= high && high <= len(s)
 ensures forall i int :: {&s[low:high][i]} 0 <= i && i < len(s[low:high]) ==> &s[low:high][i] == &s[i+low]
 decreases
 func SubSliceOverlaps(s []byte, low, high int) { }
-
-ghost
-requires 0 <= start && start <= end && end <= len(a)
-requires a[start:end] === b
-ensures forall i int :: { &a[i] } InRange(i, start, end) ==> &a[i] == &b[i - start]
-decreases
-func lemmaSliceGhostEquals(a, b []byte, start, end int) { }
