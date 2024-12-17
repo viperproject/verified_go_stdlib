@@ -213,12 +213,14 @@ func Contains(b, subslice []byte) (res bool) {
 }
 
 // ContainsAny reports whether any of the UTF-8-encoded code points in chars are within b.
+// @ requires false
 // @ trusted
 func ContainsAny(b []byte, chars string) bool {
 	return IndexAny(b, chars) >= 0
 }
 
 // ContainsRune reports whether the rune is contained in the UTF-8-encoded byte slice b.
+// @ requires false
 // @ trusted
 func ContainsRune(b []byte, r rune) bool {
 	return IndexRune(b, r) >= 0
@@ -393,6 +395,7 @@ func IndexRune(s []byte, r rune) int {
 // It returns the byte index of the first occurrence in s of any of the Unicode
 // code points in chars. It returns -1 if chars is empty or if there is no code
 // point in common.
+// @ requires false
 // @ trusted
 func IndexAny(s []byte, chars string) int {
 	if chars == "" {
@@ -478,6 +481,7 @@ func IndexAny(s []byte, chars string) int {
 // points. It returns the byte index of the last occurrence in s of any of
 // the Unicode code points in chars. It returns -1 if chars is empty or if
 // there is no code point in common.
+// @ requires false
 // @ trusted
 func LastIndexAny(s []byte, chars string) int {
 	if chars == "" {
@@ -564,6 +568,7 @@ func LastIndexAny(s []byte, chars string) int {
 // Generic split: splits after each instance of sep,
 // including sepSave bytes of sep in the subslices.
 //
+// @ requires false
 // @ trusted // TODO
 func genSplit(s, sep []byte, sepSave, n int) [][]byte {
 	if n == 0 {
@@ -613,6 +618,7 @@ func genSplit(s, sep []byte, sepSave, n int) [][]byte {
 //
 // @ preserves acc(sl.Bytes(sep, 0, len(sep)), R39)
 //
+// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R39)
 // @ trusted // TODO
 func SplitN(s, sep []byte, n int) [][]byte { return genSplit(s, sep, 0, n) }
@@ -626,6 +632,7 @@ func SplitN(s, sep []byte, n int) [][]byte { return genSplit(s, sep, 0, n) }
 //	n == 0: the result is nil (zero subslices)
 //	n < 0: all subslices
 //
+// @ requires false
 // @ trusted // TODO
 func SplitAfterN(s, sep []byte, n int) [][]byte {
 	return genSplit(s, sep, len(sep), n)
@@ -637,6 +644,7 @@ func SplitAfterN(s, sep []byte, n int) [][]byte {
 // It is equivalent to SplitN with a count of -1.
 //
 // To split around the first instance of a separator, see Cut.
+// @ requires false
 // @ trusted // TODO
 func Split(s, sep []byte) [][]byte { return genSplit(s, sep, 0, -1) }
 
@@ -644,6 +652,7 @@ func Split(s, sep []byte) [][]byte { return genSplit(s, sep, 0, -1) }
 // returns a slice of those subslices.
 // If sep is empty, SplitAfter splits after each UTF-8 sequence.
 // It is equivalent to SplitAfterN with a count of -1.
+// @ requires false
 // @ trusted // TODO
 func SplitAfter(s, sep []byte) [][]byte {
 	return genSplit(s, sep, len(sep), -1)
@@ -663,6 +672,7 @@ var asciiSpace = [256]uint8{'\t': 1, '\n': 1, '\f': 1, '\r': 1, ' ': 1}
 // characters, as defined by unicode.IsSpace, returning a slice of subslices of s or an
 // empty slice if s contains only white space.
 //
+// @ requires false
 // @ requires forall i int :: {asciiSpace[i]} 0 <= i && i < len(asciiSpace) ==> asciiSpace[i] == 0 || asciiSpace[i] == 1
 //
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
@@ -764,6 +774,7 @@ func Fields(s []byte) [][]byte {
 //
 // FieldsFunc makes no guarantees about the order in which it calls f(c)
 // and assumes that f always returns the same value for a given c.
+// @ requires false
 // @ trusted
 func FieldsFunc(s []byte, f func(rune) bool) [][]byte {
 	// A span is used to record a slice of s of the form s[start:end].
@@ -814,6 +825,7 @@ func FieldsFunc(s []byte, f func(rune) bool) [][]byte {
 
 // Join concatenates the elements of s to create a new byte slice. The separator
 // sep is placed between elements in the resulting slice.
+// @ requires false
 // @ trusted // TODO
 func Join(s [][]byte, sep []byte) []byte {
 	if len(s) == 0 {
@@ -893,6 +905,7 @@ func HasSuffix(s, suffix []byte) (res bool) {
 // according to the mapping function. If mapping returns a negative value, the character is
 // dropped from the byte slice with no replacement. The characters in s and the
 // output are interpreted as UTF-8-encoded code points.
+// @ requires false
 // @ trusted
 // @ decreases
 func Map(mapping func(r rune) rune, s []byte) []byte {
@@ -1445,6 +1458,7 @@ func TrimRightFunc(s []byte, f func(r rune) bool) (res []byte /*@ , ghost idx in
 
 // TrimFunc returns a subslice of s by slicing off all leading and trailing
 // UTF-8-encoded code points c that satisfy f(c).
+// @ requires false
 // @ trusted
 // @ decreases
 func TrimFunc(s []byte, f func(r rune) bool) []byte {
@@ -1507,6 +1521,7 @@ func LastIndexFunc(s []byte, f func(r rune) bool) int {
 // truth==false, the sense of the predicate function is
 // inverted.
 //
+// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ ensures res == -1 || (0 <= res && res < len(s))
@@ -1534,6 +1549,7 @@ func indexFunc(s []byte, f func(r rune) bool, truth bool) (res int) {
 // truth==false, the sense of the predicate function is
 // inverted.
 //
+// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ ensures -1 <= res && res < len(s)
@@ -1568,6 +1584,7 @@ type asciiSet [8]uint32
 // makeASCIISet creates a set of ASCII characters and reports whether all
 // characters in chars are ASCII.
 //
+// @ requires false
 // @ trusted
 //
 //gobra:rewrite 976a483f32dd9f1734093b6a51f1c1e7cd6c20c3d1b7e2707ce1d6b6d3ccf908
@@ -1597,6 +1614,7 @@ func makeASCIISet(chars string) (asc asciiSet, ok bool) {
 
 // contains reports whether c is inside the set.
 //
+// @ requires false
 // @ trusted
 // @ decreases
 //
@@ -1614,6 +1632,7 @@ func (asc *asciiSet) contains(c byte) bool {
 // containsRune is a simplified version of strings.ContainsRune
 // to avoid importing the strings package.
 // We avoid bytes.ContainsRune to avoid allocating a temporary copy of s.
+// @ requires false
 // @ trusted
 // @ decreases
 func containsRune(s string, r rune) bool {
@@ -1627,6 +1646,7 @@ func containsRune(s string, r rune) bool {
 
 // Trim returns a subslice of s by slicing off all leading and
 // trailing UTF-8-encoded code points contained in cutset.
+// @ requires false
 // @ trusted
 func Trim(s []byte, cutset string) []byte {
 	if len(s) == 0 {
@@ -1652,6 +1672,7 @@ func Trim(s []byte, cutset string) []byte {
 
 // TrimLeft returns a subslice of s by slicing off all leading
 // UTF-8-encoded code points contained in cutset.
+// @ requires false
 // @ trusted
 func TrimLeft(s []byte, cutset string) []byte {
 	if len(s) == 0 {
@@ -1758,6 +1779,7 @@ func trimLeftUnicode(s []byte, cutset string) []byte {
 //
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
+// @ requires false
 // @ trusted
 func TrimRight(s []byte, cutset string) []byte {
 	if len(s) == 0 || cutset == "" {
@@ -2008,6 +2030,7 @@ func Runes(s []byte) (res []rune) {
 // for a k-rune slice.
 // If n < 0, there is no limit on the number of replacements.
 //
+// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(oldval, 0, len(oldval)), R40)
@@ -2521,6 +2544,7 @@ func Clone(b []byte) (res []byte) {
 // If prefix is the empty byte slice, CutPrefix returns s, true.
 //
 // CutPrefix returns slices of the original slice s, not copies.
+// @ requires false
 // @ trusted
 func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 	if !HasPrefix(s, prefix) {
@@ -2536,6 +2560,7 @@ func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 //
 // CutSuffix returns slices of the original slice s, not copies.
 //
+// @ requires false
 // @ trusted
 //
 //gobra:rewrite 8ffb74d9bb6cd2eea093a78310d9ee0b1bf3464ef13e5e230a4260846c8e2c35
