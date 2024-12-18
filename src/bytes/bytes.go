@@ -663,7 +663,7 @@ func SplitAfter(s, sep []byte) [][]byte {
 //gobra:rewrite d7c610dc5fc5a8d07a0fc96646bdef7e515c72b766cd6916911b7c09642ca60c
 //gobra:cont var asciiSpace = [256]uint8{'\t': 1, '\n': 1, '\v': 1, '\f': 1, '\r': 1, ' ': 1}
 //gobra:end-old-code d7c610dc5fc5a8d07a0fc96646bdef7e515c72b766cd6916911b7c09642ca60c
-var asciiSpace = [256]uint8{'\t': 1, '\n': 1, '\f': 1, '\r': 1, ' ': 1}
+var asciiSpace = [256]uint8{'\t': 1, '\n': 1, 11: 1, '\f': 1, '\r': 1, ' ': 1}
 
 //gobra:endrewrite d7c610dc5fc5a8d07a0fc96646bdef7e515c72b766cd6916911b7c09642ca60c
 
