@@ -942,6 +942,8 @@ func Map(mapping func(r rune) rune, s []byte) []byte {
 // @ ensures len(res) > 0 ==> sl.Bytes(res, 0, len(res))
 //
 // @ ensures len(res) > 0 ==> sl.View(res) == bytes.Repeat(sl.View(b), count)
+//
+// @ decreases
 func Repeat(b []byte, count int) (res []byte) {
 	if count == 0 {
 		return []byte{}
@@ -967,6 +969,9 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ assert bp <= len(nb)
 
 	// @ LemmaMulPositive(len(b), count)
+	// @ assert len(nb) == len(b) * count
+	// @ LemmaLeqTransitive(len(b), len(b) * count, len(nb))
+	// @ assert len(b) <= len(b) * count
 	// @ assert len(b) <= len(nb)
 	// @ assert bp == len(b)
 	// @ assert sl.View(nb)[:bp] == sl.View(b)
@@ -976,13 +981,16 @@ func Repeat(b []byte, count int) (res []byte) {
 	// @ invariant 0 < count
 	// @ invariant 0 < i
 	// @ invariant bp == len(b) * i
-	// @ invariant bp >= 0
+	// @ invariant InRangeInc(bp, 0, len(nb)*2)
+	// @ invariant len(nb) != 0 ==> 1 <= bp
 	// @ invariant bp == i * len(b)
 	// @ invariant len(nb) == len(b)*count
 	// @ invariant acc(sl.Bytes(b, 0, len(b)), R41)
 	// @ invariant sl.Bytes(nb, 0, len(nb))
 	// @ invariant sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
+	// @ decreases 2 * len(nb) - bp
 	for bp < len(nb) {
+		// @ ghost measure := 2 * len(nb) - bp
 		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
 		// @ lemmaStillHaveToRepeat(i, count, bp, len(b), len(nb))
 		// @ assert MinInt(count, i) == i
@@ -1041,6 +1049,8 @@ func Repeat(b []byte, count int) (res []byte) {
 			assert len(nb) >= bp + bp
 			assert len(nb) >= 2 * bp
 			assert 2 * bp <= len(nb)
+			LemmaLeqTransitive(2 * i * len(b), 2 * bp, len(nb))
+			LemmaLeqTransitive(2 * i * len(b), len(nb), count * len(b))
 			assert 2 * i * len(b) <= count * len(b)
 			LemmaMulInjLeqInv(2 * i, count, len(b))
 			assert 2 * i <= count
@@ -1049,6 +1059,8 @@ func Repeat(b []byte, count int) (res []byte) {
 			assert len(nb)-bp <= bp
 			assert len(nb) <= bp+bp
 			assert len(nb) <= 2*bp
+			LemmaLeqTransitive(count*len(b), len(nb), 2*bp)
+			LemmaLeqTransitive(count*len(b), 2*bp, 2*i*len(b))
 			assert count*len(b) <= 2*i*len(b)
 			LemmaMulInjLeqInv(count, 2 * i, len(b))
 			assert count <= i*2
@@ -1085,13 +1097,17 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ requires 0 < count
 		// @ requires 0 < i
 		// @ requires sl.View(nb)[:MinInt(count, i*2) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i*2))
+		// @ requires bp < len(nb)
+		// @ requires 1 <= bp
 		// @ preserves 0 <= bp
 		// @ preserves bp == len(b) * i
+		// @ preserves bp <= len(nb) * 2
 		// @ ensures 0 < count
 		// @ ensures 0 < i
 		// @ ensures acc(sl.Bytes(b, 0, len(b)), R50)
 		// @ ensures acc(sl.Bytes(nb, 0, len(nb)), R50)
 		// @ ensures sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
+		// @ ensures before(bp) < bp
 		// @ outline (
 		// @ LemmaMul2Inj(bp, i, bp*2, i*2, len(b))
 		// @ assert bp*2 == len(b) * i*2
@@ -1122,6 +1138,7 @@ func Repeat(b []byte, count int) (res []byte) {
 		// @ assert vnb == sl.View(nb)
 		// @ assert vb == sl.View(b)
 		// @ assert sl.View(nb)[:MinInt(count, i) * len(b)] == bytes.Repeat(sl.View(b), MinInt(count, i))
+		// @ assert 2 * len(nb) - bp < measure
 	}
 
 	/* @
@@ -1131,6 +1148,8 @@ func Repeat(b []byte, count int) (res []byte) {
 	LemmaEqTransitive_int(len(nb), len(b)*count, count*len(b))
 	assert len(nb) == count*len(b)
 	assert bp == i*len(b)
+	LemmaLeqTransitive(count*len(b), len(nb), bp)
+	LemmaLeqTransitive(count*len(b), bp, i*len(b))
 	assert count*len(b) <= i*len(b)
 	ghost if len(b) != 0 {
 		LemmaMulInjLeqInv(count, i, len(b))
@@ -2178,10 +2197,13 @@ func ReplaceAll(s, oldval, newval []byte) []byte {
 // are equal under simple Unicode case-folding, which is a more general
 // form of case-insensitivity.
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(t, 0, len(t)), R40)
 //
+// @ trusted
 // @ // we cannot yet verify the body of this function, since it contains `goto`: see gobra issue #783
 func EqualFold(s, t []byte) bool /* {
 	// ASCII fast path
