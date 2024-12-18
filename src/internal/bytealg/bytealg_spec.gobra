@@ -28,7 +28,7 @@ func Cutover(n int) int
 requires 2 <= len(b) && len(b) <= MaxLen
 preserves acc(sl.Bytes(a, 0, len(a)), R45)
 preserves acc(sl.Bytes(b, 0, len(b)), R45)
-ensures -1 <= res && res + len(b) <= len(a)
+ensures res == -1 || (0 <= res && res + len(b) <= len(a))
 ensures res != -1 ==> sl.View(a)[res:res+len(b)] == sl.View(b)
 ensures res == -1 ==>
 	forall i int :: {sl.View(a)[i:i+len(b)]} InRangeInc(i, 0, len(a)-len(b)) ==> sl.View(a)[i:i+len(b)] != sl.View(b)
@@ -72,7 +72,7 @@ func HashStrRevBytes(sep []byte) (uint32, uint32)
 
 preserves acc(sl.Bytes(s, 0, len(s)), R50)
 preserves acc(sl.Bytes(sep, 0, len(sep)), R50)
-ensures -1 <= res && res + len(sep) <= len(s)
+ensures res == -1 || (0 <= res && res + len(sep) <= len(s))
 ensures res != -1 ==> sl.View(s)[res:res+len(sep)] == sl.View(sep)
 ensures res == -1 ==>
 	forall i int :: {sl.View(s)[i:i+len(sep)]} InRangeInc(i, 0, len(s)-len(sep)) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
