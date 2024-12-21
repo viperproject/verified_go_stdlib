@@ -1536,7 +1536,6 @@ func TrimPrefix(s, prefix []byte) (res []byte) {
 	if HasPrefix(s, prefix) {
 		// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
 		// @ SubSliceOverlaps(s, len(prefix), len(s))
-		// @ SubSliceOverlaps(s, 0, len(prefix))
 		res = s[len(prefix):]
 		// @ fold acc(sl.Bytes(res, 0, len(res)), R41)
 		/* @
@@ -1556,19 +1555,40 @@ func TrimPrefix(s, prefix []byte) (res []byte) {
 // TrimSuffix returns s without the provided trailing suffix string.
 // If s doesn't end with suffix, s is returned unchanged.
 //
-// @ requires false
-//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
+//
+// @ requires acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(suffix, 0, len(suffix)), R40)
 //
-// @ decreases
+// @ ensures acc(sl.Bytes(s, 0, len(s)), R41)
 //
-// @ trusted
-func TrimSuffix(s, suffix []byte) []byte {
+// @ ensures acc(sl.Bytes(res, 0, len(res)), R41)
+//
+// @ ensures acc(sl.Bytes(res, 0, len(res)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ ensures sl.View(s)[len(s)-len(suffix):] == sl.View(suffix) ==> sl.View(res) == sl.View(s)[:len(s)-len(suffix)]
+//
+// @ ensures sl.View(s)[len(s)-len(suffix):] != sl.View(suffix) ==> sl.View(res) == sl.View(s)
+//
+// @ decreases
+func TrimSuffix(s, suffix []byte) (res []byte) {
 	if HasSuffix(s, suffix) {
-		return s[:len(s)-len(suffix)]
+		// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
+		// @ SubSliceOverlaps(s, 0, len(s)-len(suffix))
+		res = s[:len(s)-len(suffix)]
+		// @ fold acc(sl.Bytes(res, 0, len(res)), R41)
+		/* @
+		package acc(sl.Bytes(res, 0, len(res)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {
+			unfold acc(sl.Bytes(res, 0, len(res)), R41)
+			fold acc(sl.Bytes(s, 0, len(s)), R41)
+		}
+		@ */
+		return res
 	}
+	/* @
+	package acc(sl.Bytes(s, 0, len(s)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) { }
+	@ */
 	return s
 }
 
