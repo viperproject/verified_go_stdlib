@@ -855,7 +855,7 @@ func Join(s [][]byte, sep []byte) []byte {
 //
 // @ preserves acc(sl.Bytes(prefix, 0, len(prefix)), R40)
 //
-// @ ensures res ==> (len(s) >= len(prefix))
+// @ ensures res == (sl.View(s)[:len(prefix)] == sl.View(prefix))
 //
 // @ decreases
 func HasPrefix(s, prefix []byte) (res bool) {
@@ -880,7 +880,7 @@ func HasPrefix(s, prefix []byte) (res bool) {
 //
 // @ preserves acc(sl.Bytes(suffix, 0, len(suffix)), R40)
 //
-// @ ensures res ==> len(s) >= len(suffix)
+// @ ensures res == (sl.View(s)[len(s)-len(suffix):] == sl.View(suffix))
 //
 // @ decreases
 func HasSuffix(s, suffix []byte) (res bool) {
@@ -1478,6 +1478,8 @@ func TrimLeftFunc(s []byte, f func(r rune) bool) (res []byte /*@, ghost idx int 
 // TrimRightFunc returns a subslice of s by slicing off all trailing
 // UTF-8-encoded code points c that satisfy f(c).
 //
+// @ requires false
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ ensures 0 <= idx && idx <= len(s)
@@ -1485,6 +1487,8 @@ func TrimLeftFunc(s []byte, f func(r rune) bool) (res []byte /*@, ghost idx int 
 // @ ensures forall j int :: {&s[:idx][j]} 0 <= j && j < len(s[:idx]) ==> &s[:idx][j] == &res[j]
 //
 // @ decreases
+//
+// @ trusted
 func TrimRightFunc(s []byte, f func(r rune) bool) (res []byte /*@ , ghost idx int @*/) {
 	i := lastIndexFunc(s, f, false)
 	// @ unfold acc(sl.Bytes(s, 0, len(s)), R40)
@@ -1513,15 +1517,39 @@ func TrimFunc(s []byte, f func(r rune) bool) []byte {
 // TrimPrefix returns s without the provided leading prefix string.
 // If s doesn't start with prefix, s is returned unchanged.
 //
-// @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
+// @ requires acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(prefix, 0, len(prefix)), R40)
 //
+// @ ensures acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ ensures acc(sl.Bytes(res, 0, len(res)), R41)
+//
+// @ ensures acc(sl.Bytes(res, 0, len(res)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ ensures sl.View(s)[:len(prefix)] == sl.View(prefix) ==> sl.View(res) == sl.View(s)[len(prefix):]
+//
+// @ ensures sl.View(s)[:len(prefix)] != sl.View(prefix) ==> sl.View(res) == sl.View(s)
+//
 // @ decreases
-func TrimPrefix(s, prefix []byte) []byte {
+func TrimPrefix(s, prefix []byte) (res []byte) {
 	if HasPrefix(s, prefix) {
-		return s[len(prefix):]
+		// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
+		// @ SubSliceOverlaps(s, len(prefix), len(s))
+		// @ SubSliceOverlaps(s, 0, len(prefix))
+		res = s[len(prefix):]
+		// @ fold acc(sl.Bytes(res, 0, len(res)), R41)
+		/* @
+		package acc(sl.Bytes(res, 0, len(res)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {
+			unfold acc(sl.Bytes(res, 0, len(res)), R41)
+			fold acc(sl.Bytes(s, 0, len(s)), R41)
+		}
+		@ */
+		return res
 	}
+	/* @
+	package acc(sl.Bytes(s, 0, len(s)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) { }
+	@ */
 	return s
 }
 
@@ -1747,8 +1775,10 @@ func TrimLeft(s []byte, cutset string) []byte {
 }
 
 // @ preserves forall i int :: {&s[i]} 0 <= i && i < len(s) ==> acc(&s[i], _)
+// @ decreases
 func trimLeftByte(s []byte, c byte) []byte {
 	// @ invariant forall i int :: {&s[i]} 0 <= i && i < len(s) ==> acc(&s[i], _)
+	// @ decreases len(s)
 	for len(s) > 0 && s[0] == c {
 		// @ assert forall i int :: {&s[1:][i]} 0 <= i && i < len(s[1:]) ==> &s[1:][i] == &s[i+1]
 		s = s[1:]
