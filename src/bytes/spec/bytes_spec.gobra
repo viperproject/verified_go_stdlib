@@ -22,3 +22,27 @@ decreases
 pure func MatchesSubseqAt(a, b seq[byte], i int) (res bool) {
 	return a[i:i+len(b)] == b
 }
+
+ghost
+decreases
+pure func SpecHasPrefix(s, prefix seq[byte]) (res bool) {
+	return s[:len(prefix)] == prefix
+}
+
+ghost
+decreases
+pure func SpecHasSuffix(s, suffix seq[byte]) (res bool) {
+	return s[len(s)-len(suffix):] == suffix
+}
+
+ghost
+decreases
+pure func SpecTrimPrefix(s, prefix seq[byte]) (res seq[byte]) {
+	return SpecHasPrefix(s, prefix) ? s[len(prefix):] : s
+}
+
+ghost
+decreases
+pure func SpecTrimSuffix(s, suffix seq[byte]) (res seq[byte]) {
+	return SpecHasSuffix(s, suffix) ? s[:len(s)-len(suffix)] : s
+}

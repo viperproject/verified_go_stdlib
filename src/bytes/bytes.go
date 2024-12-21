@@ -855,7 +855,7 @@ func Join(s [][]byte, sep []byte) []byte {
 //
 // @ preserves acc(sl.Bytes(prefix, 0, len(prefix)), R40)
 //
-// @ ensures res == (sl.View(s)[:len(prefix)] == sl.View(prefix))
+// @ ensures res == SpecHasPrefix(sl.View(s), sl.View(prefix))
 //
 // @ decreases
 func HasPrefix(s, prefix []byte) (res bool) {
@@ -880,7 +880,7 @@ func HasPrefix(s, prefix []byte) (res bool) {
 //
 // @ preserves acc(sl.Bytes(suffix, 0, len(suffix)), R40)
 //
-// @ ensures res == (sl.View(s)[len(s)-len(suffix):] == sl.View(suffix))
+// @ ensures res == SpecHasSuffix(sl.View(s), sl.View(suffix))
 //
 // @ decreases
 func HasSuffix(s, suffix []byte) (res bool) {
@@ -1527,9 +1527,7 @@ func TrimFunc(s []byte, f func(r rune) bool) []byte {
 //
 // @ ensures acc(sl.Bytes(res, 0, len(res)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
 //
-// @ ensures sl.View(s)[:len(prefix)] == sl.View(prefix) ==> sl.View(res) == sl.View(s)[len(prefix):]
-//
-// @ ensures sl.View(s)[:len(prefix)] != sl.View(prefix) ==> sl.View(res) == sl.View(s)
+// @ ensures sl.View(res) == SpecTrimPrefix(sl.View(s), sl.View(prefix))
 //
 // @ decreases
 func TrimPrefix(s, prefix []byte) (res []byte) {
@@ -1567,9 +1565,7 @@ func TrimPrefix(s, prefix []byte) (res []byte) {
 //
 // @ ensures acc(sl.Bytes(res, 0, len(res)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
 //
-// @ ensures sl.View(s)[len(s)-len(suffix):] == sl.View(suffix) ==> sl.View(res) == sl.View(s)[:len(s)-len(suffix)]
-//
-// @ ensures sl.View(s)[len(s)-len(suffix):] != sl.View(suffix) ==> sl.View(res) == sl.View(s)
+// @ ensures sl.View(res) == SpecTrimSuffix(sl.View(s), sl.View(suffix))
 //
 // @ decreases
 func TrimSuffix(s, suffix []byte) (res []byte) {
@@ -2666,6 +2662,10 @@ func Clone(b []byte) (res []byte) {
 //
 // @ ensures acc(sl.Bytes(after, 0, len(after)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
 //
+// @ ensures found == SpecHasPrefix(sl.View(s), sl.View(prefix))
+//
+// @ ensures sl.View(after) == SpecTrimPrefix(sl.View(s), sl.View(prefix))
+//
 // @ decreases
 func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 	if !HasPrefix(s, prefix) {
@@ -2674,16 +2674,14 @@ func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 	}
 	// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
 	// @ SubSliceOverlaps(s, len(prefix), len(s))
-	after = s[len(prefix):]
-	// @ fold acc(sl.Bytes(after, 0, len(after)), R41)
+	// @ fold acc(sl.Bytes(s[len(prefix):], 0, len(s[len(prefix):])), R41)
 	/* @
-	package acc(sl.Bytes(after, 0, len(after)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {
-		unfold acc(sl.Bytes(after, 0, len(after)), R41)
+	package acc(sl.Bytes(s[len(prefix):], 0, len(s[len(prefix):])), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {
+		unfold acc(sl.Bytes(s[len(prefix):], 0, len(s[len(prefix):])), R41)
 		fold acc(sl.Bytes(s, 0, len(s)), R41)
 	}
 	@ */
-	// @ assert acc(sl.Bytes(after, 0, len(after)), R41)
-	return after, true
+	return s[len(prefix):], true
 }
 
 // CutSuffix returns s without the provided ending suffix byte slice
@@ -2693,8 +2691,19 @@ func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 //
 // CutSuffix returns slices of the original slice s, not copies.
 //
-// @ requires false
-// @ trusted
+// @ requires acc(sl.Bytes(s, 0, len(s)), R40)
+//
+// @ preserves acc(sl.Bytes(suffix, 0, len(suffix)), R40)
+//
+// @ ensures acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ ensures acc(sl.Bytes(b, 0, len(b)), R41)
+//
+// @ ensures acc(sl.Bytes(b, 0, len(b)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ ensures found == SpecHasSuffix(sl.View(s), sl.View(suffix))
+//
+// @ ensures sl.View(b) == SpecTrimSuffix(sl.View(s), sl.View(suffix))
 //
 //gobra:rewrite 8ffb74d9bb6cd2eea093a78310d9ee0b1bf3464ef13e5e230a4260846c8e2c35
 //gobra:cont func CutSuffix(s, suffix []byte) (before []byte, found bool) {
@@ -2702,7 +2711,18 @@ func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 func CutSuffix(s, suffix []byte) (b []byte, found bool) {
 	//gobra:endrewrite 8ffb74d9bb6cd2eea093a78310d9ee0b1bf3464ef13e5e230a4260846c8e2c35
 	if !HasSuffix(s, suffix) {
+		// @ package acc(sl.Bytes(s, 0, len(s)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {}
 		return s, false
 	}
+	// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
+	// @ SubSliceOverlaps(s, len(suffix), len(s))
+
+	// @ fold acc(sl.Bytes(s[:len(s)-len(suffix)], 0, len(s[:len(s)-len(suffix)])), R41)
+	/* @
+	package acc(sl.Bytes(s[:len(s)-len(suffix)], 0, len(s[:len(s)-len(suffix)])), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {
+		unfold acc(sl.Bytes(s[:len(s)-len(suffix)], 0, len(s[:len(s)-len(suffix)])), R41)
+		fold acc(sl.Bytes(s, 0, len(s)), R41)
+	}
+	@ */
 	return s[:len(s)-len(suffix)], true
 }
