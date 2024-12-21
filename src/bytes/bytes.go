@@ -2655,13 +2655,35 @@ func Clone(b []byte) (res []byte) {
 // If prefix is the empty byte slice, CutPrefix returns s, true.
 //
 // CutPrefix returns slices of the original slice s, not copies.
-// @ requires false
-// @ trusted
+//
+// @ requires acc(sl.Bytes(s, 0, len(s)), R40)
+//
+// @ preserves acc(sl.Bytes(prefix, 0, len(prefix)), R40)
+//
+// @ ensures acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ ensures acc(sl.Bytes(after, 0, len(after)), R41)
+//
+// @ ensures acc(sl.Bytes(after, 0, len(after)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41)
+//
+// @ decreases
 func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 	if !HasPrefix(s, prefix) {
+		// @ package acc(sl.Bytes(s, 0, len(s)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {}
 		return s, false
 	}
-	return s[len(prefix):], true
+	// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
+	// @ SubSliceOverlaps(s, len(prefix), len(s))
+	after = s[len(prefix):]
+	// @ fold acc(sl.Bytes(after, 0, len(after)), R41)
+	/* @
+	package acc(sl.Bytes(after, 0, len(after)), R41) --* acc(sl.Bytes(s, 0, len(s)), R41) {
+		unfold acc(sl.Bytes(after, 0, len(after)), R41)
+		fold acc(sl.Bytes(s, 0, len(s)), R41)
+	}
+	@ */
+	// @ assert acc(sl.Bytes(after, 0, len(after)), R41)
+	return after, true
 }
 
 // CutSuffix returns s without the provided ending suffix byte slice
