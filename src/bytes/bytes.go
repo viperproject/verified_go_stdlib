@@ -2705,6 +2705,8 @@ func CutPrefix(s, prefix []byte) (after []byte, found bool) {
 //
 // @ ensures sl.View(b) == SpecTrimSuffix(sl.View(s), sl.View(suffix))
 //
+// @ decreases
+//
 //gobra:rewrite 8ffb74d9bb6cd2eea093a78310d9ee0b1bf3464ef13e5e230a4260846c8e2c35
 //gobra:cont func CutSuffix(s, suffix []byte) (before []byte, found bool) {
 //gobra:end-old-code 8ffb74d9bb6cd2eea093a78310d9ee0b1bf3464ef13e5e230a4260846c8e2c35
