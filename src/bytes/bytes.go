@@ -568,8 +568,10 @@ func LastIndexAny(s []byte, chars string) int {
 // Generic split: splits after each instance of sep,
 // including sepSave bytes of sep in the subslices.
 //
-// @ requires false
-// @ trusted // TODO
+// @ requires 0 <= sepSave && sepSave <= len(sep)
+// @ preserves acc(sl.Bytes(s, 0, len(s)), R39)
+// @ preserves acc(sl.Bytes(sep, 0, len(sep)), R39)
+// @ decreases
 func genSplit(s, sep []byte, sepSave, n int) [][]byte {
 	if n == 0 {
 		return nil
@@ -592,13 +594,30 @@ func genSplit(s, sep []byte, sepSave, n int) [][]byte {
 	a := make([][]byte, n)
 	n--
 	i := 0
+	// @ ghost olds := s
+	// @ ghost idx := 0
+	// @ invariant 0 <= i && i <= n
+	// @ invariant 0 <= idx && idx <= len(olds)
+	// @ invariant olds[idx:] === s
+	// @ invariant acc(sl.Bytes(olds, 0, len(olds)), R40)
+	// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R40)
+	// @ invariant forall j int :: {&a[j]} 0 <= j && j < len(a) ==> acc(&a[j])
+	// @ decreases n-i
 	for i < n {
+		// @ unfold acc(sl.Bytes(olds, 0, len(olds)), R40)
+		// @ SubSliceOverlaps(olds, idx, len(olds))
+		// @ fold acc(sl.Bytes(s, 0, len(s)), R40)
 		m := Index(s, sep)
+		// @ unfold acc(sl.Bytes(s, 0, len(s)), R40)
 		if m < 0 {
+			// @ fold acc(sl.Bytes(olds, 0, len(olds)), R40)
 			break
 		}
+		// @ SubSliceOverlaps(s, 0, m+sepSave)
 		a[i] = s[: m+sepSave : m+sepSave]
 		s = s[m+len(sep):]
+		// @ idx += m + len(sep)
+		// @ fold acc(sl.Bytes(olds, 0, len(olds)), R40)
 		i++
 	}
 	a[i] = s
@@ -618,9 +637,9 @@ func genSplit(s, sep []byte, sepSave, n int) [][]byte {
 //
 // @ preserves acc(sl.Bytes(sep, 0, len(sep)), R39)
 //
-// @ requires false
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R39)
-// @ trusted // TODO
+//
+// @ decreases
 func SplitN(s, sep []byte, n int) [][]byte { return genSplit(s, sep, 0, n) }
 
 // SplitAfterN slices s into subslices after each instance of sep and
@@ -632,8 +651,11 @@ func SplitN(s, sep []byte, n int) [][]byte { return genSplit(s, sep, 0, n) }
 //	n == 0: the result is nil (zero subslices)
 //	n < 0: all subslices
 //
-// @ requires false
-// @ trusted // TODO
+// @ preserves acc(sl.Bytes(sep, 0, len(sep)), R39)
+//
+// @ preserves acc(sl.Bytes(s, 0, len(s)), R39)
+//
+// @ decreases
 func SplitAfterN(s, sep []byte, n int) [][]byte {
 	return genSplit(s, sep, len(sep), n)
 }
@@ -644,16 +666,24 @@ func SplitAfterN(s, sep []byte, n int) [][]byte {
 // It is equivalent to SplitN with a count of -1.
 //
 // To split around the first instance of a separator, see Cut.
-// @ requires false
-// @ trusted // TODO
+//
+// @ preserves acc(sl.Bytes(sep, 0, len(sep)), R39)
+//
+// @ preserves acc(sl.Bytes(s, 0, len(s)), R39)
+//
+// @ decreases
 func Split(s, sep []byte) [][]byte { return genSplit(s, sep, 0, -1) }
 
 // SplitAfter slices s into all subslices after each instance of sep and
 // returns a slice of those subslices.
 // If sep is empty, SplitAfter splits after each UTF-8 sequence.
 // It is equivalent to SplitAfterN with a count of -1.
-// @ requires false
-// @ trusted // TODO
+//
+// @ preserves acc(sl.Bytes(sep, 0, len(sep)), R39)
+//
+// @ preserves acc(sl.Bytes(s, 0, len(s)), R39)
+//
+// @ decreases
 func SplitAfter(s, sep []byte) [][]byte {
 	return genSplit(s, sep, len(sep), -1)
 }
