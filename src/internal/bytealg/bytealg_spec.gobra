@@ -30,10 +30,8 @@ preserves acc(sl.Bytes(a, 0, len(a)), R45)
 preserves acc(sl.Bytes(b, 0, len(b)), R45)
 ensures res == -1 || (0 <= res && res + len(b) <= len(a))
 ensures res != -1 ==> sl.View(a)[res:res+len(b)] == sl.View(b)
-ensures res == -1 ==>
-	forall i int :: {sl.View(a)[i:i+len(b)]} InRangeInc(i, 0, len(a)-len(b)) ==> sl.View(a)[i:i+len(b)] != sl.View(b)
-ensures res != -1 ==>
-	forall i int :: {sl.View(a)[i:i+len(b)]} 0 <= i && i < res ==> sl.View(a)[i:i+len(b)] != sl.View(b)
+ensures res == -1 ==> NotFoundInPrefix(sl.View(a), sl.View(b), len(a)-len(b)+1)
+ensures res != -1 ==> NotFoundInPrefix(sl.View(a), sl.View(b), res)
 trusted
 decreases
 func Index(a, b []byte) (res int)
@@ -74,9 +72,8 @@ preserves acc(sl.Bytes(s, 0, len(s)), R50)
 preserves acc(sl.Bytes(sep, 0, len(sep)), R50)
 ensures res == -1 || (0 <= res && res + len(sep) <= len(s))
 ensures res != -1 ==> sl.View(s)[res:res+len(sep)] == sl.View(sep)
-ensures res == -1 ==>
-	forall i int :: {sl.View(s)[i:i+len(sep)]} InRangeInc(i, 0, len(s)-len(sep)) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
-ensures res != -1 ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i < res ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
+ensures res == -1 ==> NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
+ensures res != -1 ==> NotFoundInPrefix(sl.View(s), sl.View(sep), res)
 trusted
 decreases
 func IndexRabinKarpBytes(s, sep []byte) (res int)

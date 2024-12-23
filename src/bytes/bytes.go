@@ -170,8 +170,13 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 		// @ fold acc(sl.Bytes(s, 0, len(s)), p)
 		// @ assert sl.View(s) == sl.View(olds)[idx:]
 		i := Index(s, sep)
-		// @ assert i != -1 ==> forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k < i ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
-		// @ assert i != -1 ==> forall k int :: {sl.View(olds)[idx:][k:k+len(sep)]} 0 <= k && k < i ==> sl.View(olds)[idx:][k:k+len(sep)] != sl.View(sep)
+		// @ assert olds[idx:] === s
+		// @ lemmaViewSubslice(olds, idx, len(olds))
+		// @ assert i != -1 ==> NotFoundInPrefix(sl.View(s), sl.View(sep), i)
+		// @ assert i != -1 ==> NotFoundInPrefix(sl.View(olds)[idx:], sl.View(sep), i)
+		// @ assert i == -1 ==> NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
+		// @ assert i == -1 ==> NotFoundInPrefix(sl.View(olds)[idx:], sl.View(sep), len(s)-len(sep)+1)
+
 		// @ unfold acc(sl.Bytes(s, 0, len(s)), p)
 
 		// @ fold acc(sl.Bytes(olds, 0, len(olds)), p)
@@ -180,6 +185,7 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 			// @ ghost vs := sl.View(olds)
 			// @ ghost vsep := sl.View(sep)
 
+			// @ assert reveal NotFoundInPrefix(vs[idx:], vsep, len(s)-len(sep)+1)
 			// @ lemmaSepNotEquals(vs, vsep, idx, len(vs[idx:])-len(sep))
 			// @ lemmaCountSepNotFoundInTail(sl.View(olds), sl.View(sep), indices, idx, 0, len(olds))
 			// @ assert sl.View(olds) == sl.View(olds)[:len(olds)]
@@ -188,6 +194,7 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 			return n // @ , indices
 		}
 
+		// @ assert reveal NotFoundInPrefix(sl.View(olds)[idx:], sl.View(sep), i)
 		// @ assert forall j int :: {vs[idx:][j:j+len(sep)]} 0 <= j && j < i ==> vs[idx:][j:j+len(sep)] != vsep
 		// @ lemmaCountSepFound(vs, sl.View(sep), indices, idx, i, 0)
 
@@ -209,7 +216,14 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 //
 // @ decreases
 func Contains(b, subslice []byte) (res bool) {
-	return Index(b, subslice) != -1
+	//gobra:rewrite af8fb2e27301e3aa3c992e6c6d63e2767a7f2807d28b3f6e9d97e717747a0105
+	//gobra:cont 	return Index(b, subslice) != -1
+	//gobra:end-old-code af8fb2e27301e3aa3c992e6c6d63e2767a7f2807d28b3f6e9d97e717747a0105
+	i := Index(b, subslice)
+	// @ assert i != -1 ==> reveal NotFoundInPrefix(sl.View(b), sl.View(subslice), i)
+	// @ assert i == -1 ==> reveal NotFoundInPrefix(sl.View(b), sl.View(subslice), len(b)-len(subslice)+1)
+	return i != -1
+	//gobra:endrewrite af8fb2e27301e3aa3c992e6c6d63e2767a7f2807d28b3f6e9d97e717747a0105
 }
 
 // ContainsAny reports whether any of the UTF-8-encoded code points in chars are within b.
@@ -2372,22 +2386,21 @@ hasUnicode:
 //
 // @ ensures res == -1 || (0 <= res && res + len(sep) <= len(s))
 //
-// @ ensures res != -1 ==> forall i int :: {&s[res:res+len(sep)][i]}{&s[i+res]} 0 <= i && i < len(s[res:res+len(sep)]) ==> &s[res:res+len(sep)][i] == &s[i+res]
-//
 // @ ensures res != -1 ==> sl.View(s)[res:res+len(sep)] == sl.View(sep)
 //
-// # this property is not verified (yet)
-// @ ensures res != -1 ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i < res ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
+// @ ensures res != -1 ==> NotFoundInPrefix(sl.View(s), sl.View(sep), res)
 //
-// @ ensures res == -1 ==> forall i int :: {sl.View(s)[i:i+len(sep)]} 0 <= i && i + len(sep) <= len(s) ==> sl.View(s)[i:i+len(sep)] != sl.View(sep)
+// @ ensures res == -1 ==> NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
 //
 // @ decreases
 func Index(s, sep []byte) (res int) {
 	n := len(sep)
 	switch {
 	case n == 0:
+		// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), 0)
 		return 0
 	case n == 1:
+
 		//gobra:rewrite e4ce06c882699aa24a46ac5f5ed3a2d1331f7d8c7b2a871c9ffe07721bfb9039
 		//gobra:cont 		return IndexByte(s,
 		//gobra:cont 			/* @ unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in @ */ sep[0])
@@ -2396,14 +2409,24 @@ func Index(s, sep []byte) (res int) {
 			/* @ unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in @ */ sep[0])
 		// @ ghost s0 := unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in sep[0]
 		// @ assert sl.View(sep)[0] == s0
+		/* @
+		ghost if res == -1 {
+			assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
+		} else {
+			assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), res)
+		}
+		@ */
 		return res
 		//gobra:endrewrite e4ce06c882699aa24a46ac5f5ed3a2d1331f7d8c7b2a871c9ffe07721bfb9039
 	case n == len(s):
 		if Equal(sep, s) {
+			// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), 0)
 			return 0
 		}
+		// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
 		return -1
 	case n > len(s):
+		// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
 		return -1
 	case n <= bytealg.MaxLen:
 		// Use brute force when s and sep both are small
@@ -2423,17 +2446,20 @@ func Index(s, sep []byte) (res int) {
 		t := len(s) - n + 1
 		fails := 0
 
+		// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
+
 		// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
 		// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R40)
 		// @ invariant c0 == sl.View(sep)[0]
 		// @ invariant c1 == sl.View(sep)[1]
-		// @ invariant i >= 0
+		// @ invariant InRangeInc(i, 0, t)
 		// @ invariant fails >= 0
 		// @ invariant t == len(s) - n + 1
-		// @ invariant forall j int :: { sl.View(s)[j:j+len(sep)] } 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
+		// @ invariant NotFoundInPrefix(sl.View(s), sl.View(sep), i)
 		// @ decreases t - i
 		for i < t {
 			// @ ghost vs := sl.View(s)
+			// @ ghost vsep := sl.View(sep)
 			// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
 			if s[i] != c0 {
 				// IndexByte is faster than bytealg.Index, so use it as long as
@@ -2441,26 +2467,43 @@ func Index(s, sep []byte) (res int) {
 				// @ SubSliceOverlaps(s, i+1, t)
 				// @ fold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 				o := IndexByte(s[i+1:t], c0)
-				// @ assert forall j int :: {sl.View(s[i+1:t])[j]} 0 <= j && j < o ==> sl.View(s[i+1:t])[j] != c0
-				// @ lemmaViewSubslice(s, i+1, t)
-				// @ assert forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < o ==> sl.View(s)[i+1:t][j] != c0
+				// @ lemmaIndexNotFoundInPrefixFirstByteMismatch(sl.View(s), sl.View(sep), i)
+				// @ assert NotFoundInPrefix(vs, vsep, i+1)
 
 				if o < 0 {
-					// @ assert forall j int :: {sl.View(s)[i+1:t][j]} 0 <= j && j < len(s[i+1:t]) ==> sl.View(s)[i+1:t][j] != c0
+					// @ assert forall k int :: {sl.View(s[i+1:t])[k]} 0 <= k && k < len(s[i+1:t]) ==> sl.View(s[i+1:t])[k] != c0
+					// @ lemmaViewSubslice(s, i+1, t)
+					// @ assert forall k int :: {vs[i+1:t][k]} 0 <= k && k < len(s[i+1:t]) ==> vs[i+1:t][k] != c0
+					// @ assert forall k int :: {vs[i+1:t][k]} 0 <= k && k < t-i-1 ==> vs[i+1:t][k] != c0
+					// @ assert forall k int :: {vs[i+1:][k]} 0 <= k && k < t-i-1 ==> vs[i+1:][k] != c0
+
+					// @ lemmaIndexBytePromote(vs[i+1:], vsep, t-i-1)
+					// @ assert NotFoundInPrefix(vs[i+1:], vsep, t-i-1)
+
 					// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 					// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+					// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
 					// @ lemmaIndexIndexByteNotFound(sl.View(s), sl.View(sep), i, t)
+					// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
 					return -1
 				}
+
+				// @ assert forall k int :: {sl.View(s[i+1:t])[k]} 0 <= k && k < o ==> sl.View(s[i+1:t])[k] != c0
+				// @ lemmaViewSubslice(s, i+1, t)
+				// @ assert forall k int :: {vs[i+1:t][k]} 0 <= k && k < o ==> vs[i+1:t][k] != c0
+				// @ assert forall k int :: {vs[i+1:][k]} 0 <= k && k < o ==> vs[i+1:][k] != c0
 				// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 
-				// @ lemmaIndexIndexByteIsNotPrefix(sl.View(s), sl.View(sep), i, t, o)
+				// @ lemmaIndexBytePromote(vs[i+1:], vsep, o)
+				// @ assert NotFoundInPrefix(vs[i+1:], vsep, o)
+
+				// @ lemmaIndexNotFoundCombine(vs, vsep, i+1, o)
 
 				i += o + 1
-			}
-			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 
-			// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
+				// @ assert NotFoundInPrefix(vs, vsep, i)
+			}
+
 			// @ SubSliceOverlaps(s, i, i+n)
 			//gobra:rewrite 7bafdf7e4e13158c42c57d2807162d86acab287627cdfddb8689900171421936
 			//gobra:cont 			if s[i+1] == c1 && Equal(s[i:i+n], sep) {
@@ -2474,8 +2517,11 @@ func Index(s, sep []byte) (res int) {
 				//gobra:endrewrite 7bafdf7e4e13158c42c57d2807162d86acab287627cdfddb8689900171421936
 				return i
 			}
+			// @ lemmaViewSubslice(s, i, i+n)
 			// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+			// @ lemmaIndexNotFoundInPrefixFirstInstanceMismatch(vs, vsep, i)
+			// @ assert NotFoundInPrefix(vs, vsep, i)
 			fails++
 			i++
 			// Switch to bytealg.Index when IndexByte produces too many false positives.
@@ -2484,37 +2530,32 @@ func Index(s, sep []byte) (res int) {
 				// @ SubSliceOverlaps(s, i, len(s))
 				// @ fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				r := bytealg.Index(s[i:], sep)
-				// @ assert r != -1 ==> forall j int :: {sl.View(s[i:])[j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s[i:])[j:j+len(sep)] != sl.View(sep)
-				/* @
-				ghost if r == -1 {
-					assert forall k int :: {sl.View(s[i:])[k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s[i:])[k:k+len(sep)] != sl.View(sep)
-					lemmaViewEqualsIndex(s, sl.View(sep), i)
-				} else {
-					lemmaViewSliceSepEquals(s, sl.View(sep), i, r)
-				}
-				@ */
-				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
-				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+
 				if r >= 0 {
+					// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, r)
+					// @ lemmaViewSubslice(s, i, len(s))
+					// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, r)
+					// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, r)
+					// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
+					// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
 
-					// @ assert forall j int :: {sl.View(s)[i:][j:j+len(sep)]} 0 <= j && j < r ==> sl.View(s)[i:][j:j+len(sep)] != sl.View(sep)
-					// @ lemmaSliceSequence(sl.View(s), sl.View(sep), i, r)
-
-					// @ assert forall j int :: { sl.View(s)[j:j+len(sep)] } 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
-					// @ lemmaIndexAdvance(sl.View(s), sl.View(sep), i, r+i)
-					// @ assert forall j int :: {sl.View(s)[j:j+len(sep)]} 0 <= j && j < r+i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
-
-					// @ assert r + i != -1
+					// @ lemmaIndexNotFoundCombine(vs, vsep, i, r)
 
 					return r + i
 				}
-				// @ assert r == -1
-				// @ lemmaIndexNotFound(vs, sl.View(sep), i)
-				// @ assert forall k int :: {vs[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> vs[k:k+len(sep)] != sl.View(sep)
-				// @ assert -1 == -1 ==> forall k int :: {vs[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> vs[k:k+len(sep)] != sl.View(sep)
+				// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, len(s[i:])-len(sep)+1)
+				// @ lemmaViewSubslice(s, i, len(s))
+				// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, len(s[i:])-len(sep)+1)
+				// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, len(s[i:])-len(sep)+1)
+				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
+				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+				// @ lemmaIndexNotFoundCombine(vs, vsep, i, len(s[i:])-len(sep)+1)
+
 				return -1
 			}
 		}
+
+		// @ assert NotFoundInPrefix(sl.View(s), sl.View(sep), t)
 		return -1
 	}
 	// @ unfold acc(sl.Bytes(sep, 0, len(sep)), R41)
@@ -2524,6 +2565,7 @@ func Index(s, sep []byte) (res int) {
 	i := 0
 	fails := 0
 	t := len(s) - n + 1
+	// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
 	// @ ghost vsep := sl.View(sep)
 	// @ ghost vs := sl.View(s)
 	// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
@@ -2534,7 +2576,7 @@ func Index(s, sep []byte) (res int) {
 	// @ invariant c1 == vsep[1]
 	// @ invariant InRangeInc(i, 0, t)
 	// @ invariant t == len(s) - n + 1
-	// @ invariant forall j int :: { vs[j:j+len(sep)] } 0 <= j && j < i ==> vs[j:j+len(sep)] != vsep
+	// @ invariant NotFoundInPrefix(vs, vsep, i)
 	// @ decreases t - i
 	for i < t {
 		// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2542,13 +2584,39 @@ func Index(s, sep []byte) (res int) {
 			// @ SubSliceOverlaps(s, i+1, t)
 			// @ fold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 			o := IndexByte(s[i+1:t], c0)
-			// @ assert sl.View(s[i+1:t]) == vs[i+1:t]
-			// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
+			// @ lemmaIndexNotFoundInPrefixFirstByteMismatch(sl.View(s), sl.View(sep), i)
+			// @ assert NotFoundInPrefix(vs, vsep, i+1)
 			if o < 0 {
+				// @ assert forall k int :: {sl.View(s[i+1:t])[k]} 0 <= k && k < len(s[i+1:t]) ==> sl.View(s[i+1:t])[k] != c0
+				// @ lemmaViewSubslice(s, i+1, t)
+				// @ assert forall k int :: {vs[i+1:t][k]} 0 <= k && k < len(s[i+1:t]) ==> vs[i+1:t][k] != c0
+				// @ assert forall k int :: {vs[i+1:t][k]} 0 <= k && k < t-i-1 ==> vs[i+1:t][k] != c0
+				// @ assert forall k int :: {vs[i+1:][k]} 0 <= k && k < t-i-1 ==> vs[i+1:][k] != c0
+
+				// @ lemmaIndexBytePromote(vs[i+1:], vsep, t-i-1)
+				// @ assert NotFoundInPrefix(vs[i+1:], vsep, t-i-1)
+
+				// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+
+				// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
+				// @ lemmaIndexIndexByteNotFound(sl.View(s), sl.View(sep), i, t)
+				// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
+
 				break
 			}
+			// @ assert forall k int :: {sl.View(s[i+1:t])[k]} 0 <= k && k < o ==> sl.View(s[i+1:t])[k] != c0
+			// @ lemmaViewSubslice(s, i+1, t)
+			// @ assert forall k int :: {vs[i+1:t][k]} 0 <= k && k < o ==> vs[i+1:t][k] != c0
+			// @ assert forall k int :: {vs[i+1:][k]} 0 <= k && k < o ==> vs[i+1:][k] != c0
+			// @ unfold acc(sl.Bytes(s[i+1:t], 0, len(s[i+1:t])), R41)
+
+			// @ lemmaIndexBytePromote(vs[i+1:], vsep, o)
+			// @ assert NotFoundInPrefix(vs[i+1:], vsep, o)
+
+			// @ lemmaIndexNotFoundCombine(vs, vsep, i+1, o)
 			i += o + 1
+			// @ assert NotFoundInPrefix(vs, vsep, i)
 		}
 		//gobra:rewrite 5e92da7b0d472efdc4e87211ab9ead496a89c44d2219edf05a825aa7b3088140
 		//gobra:cont 		if s[i+1] == c1 && Equal(s[i:i+n], sep) {
@@ -2561,16 +2629,16 @@ func Index(s, sep []byte) (res int) {
 			// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
 			//gobra:endrewrite 5e92da7b0d472efdc4e87211ab9ead496a89c44d2219edf05a825aa7b3088140
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-			// @ assert i != -1 ==> forall j int :: {sl.View(s)[j:j+len(sep)]} 0 <= j && j < i ==> sl.View(s)[j:j+len(sep)] != sl.View(sep)
 			return i
 			// }
 		}
-		// @ assert !(p1 && sl.View(s[i:i+len(vsep)]) == vsep)
-		// @ lemmaViewSubslice(s, i, i+len(vsep))
-		// @ assert !(p1 && vs[i:i+len(vsep)] == vsep)
+		// @ assert sl.View(s[i:i+len(sep)]) != vsep
+		// @ lemmaViewSubslice(s, i, i+n)
+		// @ assert vs[i:i+len(sep)] != vsep
 		// @ unfold acc(sl.Bytes(s[i:i+n], 0, len(s[i:i+n])), R41)
-		// @ lemmaIndexStepOne(vs, vsep, i)
+		// @ lemmaIndexNotFoundInPrefixFirstInstanceMismatch(vs, vsep, i)
 		i++
+		// @ assert NotFoundInPrefix(vs, vsep, i)
 		fails++
 		if fails >= 4+i>>4 && i < t {
 			// Give up on IndexByte, it isn't skipping ahead
@@ -2584,33 +2652,30 @@ func Index(s, sep []byte) (res int) {
 			// @ SubSliceOverlaps(s, i, len(s))
 			// @ fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 			j := bytealg.IndexRabinKarpBytes(s[i:], sep)
-			/* @ ghost if j == -1 {
-				assert forall k int :: {sl.View(s[i:])[k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s[i:])[k:k+len(sep)] != sl.View(sep)
-				lemmaViewEqualsIndex(s, sl.View(sep), i)
-			// 00:00:59
-
-				lemmaViewSubslice(s, i, len(s))
-				lemmaViewEqualsIndex(s, sl.View(sep), i)
-				assert forall k int :: {sl.View(s)[i:][k:k+len(sep)]} InRangeInc(k, 0, len(s[i:])-len(sep)) ==> sl.View(s)[i:][k:k+len(sep)] != sl.View(sep)
-				assert 2 <= len(s)
-				assert 0 < i
-
-				assert forall k int :: {vs[k:k+len(vsep)]} InRange(k, 0, i) ==> vs[k:k+len(vsep)] != vsep
-
-
-				assert forall k int :: {vs[i:][k:k+len(vsep)]} InRangeInc(k, 0, len(vs[i:])) ==> vs[i:][k:k+len(vsep)] != vsep
-				lemmaIndexNotFound(sl.View(s), sl.View(sep), i)
-				}
-			@ */
-			// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 			if j < 0 {
+				// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, len(s[i:])-len(sep)+1)
+				// @ lemmaViewSubslice(s, i, len(s))
+				// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, len(s[i:])-len(sep)+1)
+				// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, len(s[i:])-len(sep)+1)
 
-				// @ assert forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k + len(sep) <= len(s) ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
+				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
+
+				// @ lemmaIndexNotFoundCombine(vs, vsep, i, len(s[i:])-len(sep)+1)
+
 				return -1
 			}
+
+			// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, j)
+			// @ lemmaViewSubslice(s, i, len(s))
+			// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, j)
+			// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, j)
+
+			// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 			// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
-			// @ assume forall k int :: {sl.View(s)[k:k+len(sep)]} 0 <= k && k < i+j ==> sl.View(s)[k:k+len(sep)] != sl.View(sep)
+
+			// @ lemmaIndexNotFoundCombine(vs, vsep, i, j)
+
 			return i + j
 		}
 		// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2647,8 +2712,10 @@ func Index(s, sep []byte) (res int) {
 func Cut(s, sep []byte) (b, after []byte, found bool) {
 	//gobra:endrewrite e87ea459dcf89b1423be9fd397d8f4767ad24881f1ab27c606aec78e6a86fea4
 	if i := Index(s, sep); i >= 0 {
+		// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
 		return s[:i], s[i+len(sep):], true
 	}
+	// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), len(s)-len(sep)+1)
 	return s, nil, false
 }
 

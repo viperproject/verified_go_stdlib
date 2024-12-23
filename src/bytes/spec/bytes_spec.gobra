@@ -46,3 +46,11 @@ decreases
 pure func SpecTrimSuffix(s, suffix seq[byte]) (res seq[byte]) {
 	return SpecHasSuffix(s, suffix) ? s[:len(s)-len(suffix)] : s
 }
+
+ghost
+decreases
+opaque
+pure func NotFoundInPrefix(s, sep seq[byte], high int) (res bool) {
+	return forall j int :: { s[j:j+len(sep)] } 0 <= j && j < high ==>
+		s[j:j+len(sep)] != sep
+}
