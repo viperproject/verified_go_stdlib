@@ -4,6 +4,7 @@ package spec
 
 import (
 	sl "gobra-libs/byteslice"
+	"unicode/utf8"
 )
 
 ghost
@@ -53,4 +54,16 @@ opaque
 pure func NotFoundInPrefix(s, sep seq[byte], high int) (res bool) {
 	return forall j int :: { s[j:j+len(sep)] } 0 <= j && j < high ==>
 		s[j:j+len(sep)] != sep
+}
+
+ghost
+decreases len(s)
+pure func SpecCount(s, sep seq[byte]) (res int) {
+	return len(sep) == 0 ?
+		len(utf8.Codepoints(s)) + 1 :
+		len(s) == 0 ?
+			0 :
+			s[:len(sep)] == sep ?
+				1 + SpecCount(s[len(sep):], sep) :
+				SpecCount(s[1:], sep)
 }

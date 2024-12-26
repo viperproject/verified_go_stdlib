@@ -44,6 +44,45 @@ pure func SpecCount(s, sep seq[byte]) (res int) {
 */
 
 ghost
+requires 0 < len(sep)
+requires InRangeInc(i, 0, len(s))
+ensures SpecCountIntermediate(s, sep, i) == SpecCount(s[i:], sep)
+decreases len(s) - i
+func lemmaSpecCountLowering(s, sep seq[byte], i int) {
+	if i == len(s) {
+		assert len(s[i:]) < len(sep)
+		assert SpecCount(s[i:], sep) == 0
+		assert SpecCountIntermediate(s, sep, i) == 0
+		return
+	}
+
+	if s[i:i+len(sep)] == sep {
+		assert s[i:][len(sep):] == s[i+len(sep):]
+		lemmaSpecCountLowering(s, sep, i+len(sep))
+
+		return
+	}
+
+	assert s[i:][1:] == s[i+1:]
+	lemmaSpecCountLowering(s, sep, i+1)
+
+}
+
+ghost
+requires 0 < len(sep)
+requires 0 <= i
+ensures res == len(SpecCountIndices(s, sep, i))
+decreases len(s) - i
+pure func SpecCountIntermediate(s, sep seq[byte], i int) (res int) {
+	return i >= len(s) ?
+		0 :
+		s[i:i+len(sep)] == sep ?
+			1 + SpecCountIntermediate(s, sep, i + len(sep)) :
+			SpecCountIntermediate(s, sep, i + 1)
+}
+
+
+ghost
 requires len(sep) > 0
 requires 0 <= i
 ensures forall j int :: {j in res} j in res ==> InRangeInc(j, i, len(s)-len(sep)) && s[j:j+len(sep)] == sep
@@ -217,7 +256,16 @@ func lemmaStillHaveToRepeat(i, count, bp, lb, lnb int) {
 
 
 
+// https://github.com/jcp19/verified_go_stdlib/actions/runs/12503483608/job/34883877905
 
+// ghost
+// requires acc(sl.Bytes(nb, 0, len(nb)), _)
+// requires InRangeInc(bp, 0, len(nb))
+// requires SubSliceOverlaps(nb, bp, len(nb))
+// decreases
+// pure func copied(nb []byte, bp, n int) (res bool) {
+// 	return unfolding acc(sl.Bytes(nb, 0, len(nb)), _) in forall i int :: {&nb[bp:][i]}{&nb[:bp][i]} 0 <= i && i < n ==>  nb[bp:][i] ==  nb[:bp][i]
+// }
 
 ghost
 requires InRangeInc(bp, 0, len(nb))

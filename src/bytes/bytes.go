@@ -109,14 +109,11 @@ func explode(s []byte, n int) (res [][]byte) {
 //
 // @ ensures res >= 0
 //
-// @ ensures len(indices) == res
-//
-// @ ensures len(sep) > 0 ==> indices == SpecCountIndices(sl.View(s), sl.View(sep), 0)
-//
-// @ ensures len(sep) == 0 ==> res == len(utf8.Codepoints(sl.View(s))) + 1
+// @ ensures res == SpecCount(sl.View(s), sl.View(sep))
 //
 // @ decreases
-func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
+func Count(s, sep []byte) (res int) {
+	// @ ghost var indices set[int]
 	// special case
 	if len(sep) == 0 {
 		//gobra:rewrite 3c341f4b0a84096a6659ee1fdfb4602bd26f52827793010c440fd0c659976395
@@ -124,7 +121,7 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 		//gobra:end-old-code 3c341f4b0a84096a6659ee1fdfb4602bd26f52827793010c440fd0c659976395
 		res /* @ , indices @ */ = utf8.RuneCount(s)
 		// @ assert res == len(utf8.Codepoints(sl.View(s)))
-		return res + 1 // @ , indices union set[int]{len(s)}
+		return res + 1
 		//gobra:endrewrite 3c341f4b0a84096a6659ee1fdfb4602bd26f52827793010c440fd0c659976395
 	}
 	if len(sep) == 1 {
@@ -138,7 +135,8 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 		// @ lemmaBytealgCount(indices, sl.View(s), unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in sep[0])
 		// @ assert sl.View(sep) == seq[byte]{unfolding acc(sl.Bytes(sep, 0, len(sep)), R40) in sep[0]}
 		// @ assert indices == SpecCountIndices(sl.View(s), sl.View(sep), 0)
-		return res // @ , indices
+		// @ lemmaSpecCountLowering(sl.View(s), sl.View(sep), 0)
+		return res
 		//gobra:endrewrite 66239cff85d3bf25c4daa1d173a4c87733b57ef726a40dc7d98f63cf47ccdf38
 	}
 	n := 0
@@ -191,7 +189,8 @@ func Count(s, sep []byte) (res int /* @ , ghost indices set[int] @ */) {
 			// @ assert sl.View(olds) == sl.View(olds)[:len(olds)]
 
 			// @ assert indices == SpecCountIndices(sl.View(olds), sl.View(sep), 0)
-			return n // @ , indices
+			// @ lemmaSpecCountLowering(sl.View(olds), sl.View(sep), 0)
+			return n
 		}
 
 		// @ assert reveal NotFoundInPrefix(sl.View(olds)[idx:], sl.View(sep), i)
@@ -594,12 +593,7 @@ func genSplit(s, sep []byte, sepSave, n int) [][]byte {
 		return explode(s, n)
 	}
 	if n < 0 {
-		//gobra:rewrite 3165d2315c1f2510a7dffaae76bc9952201ebfb9afaa952a59aa03ab052ec8c5
-		//gobra:cont 		n = Count(s, sep) + 1
-		//gobra:end-old-code 3165d2315c1f2510a7dffaae76bc9952201ebfb9afaa952a59aa03ab052ec8c5
-		n1 /*@, idxs @*/ := Count(s, sep)
-		n = n1 + 1
-		//gobra:endrewrite 3165d2315c1f2510a7dffaae76bc9952201ebfb9afaa952a59aa03ab052ec8c5
+		n = Count(s, sep) + 1
 	}
 	if n > len(s)+1 {
 		n = len(s) + 1
@@ -2532,7 +2526,6 @@ func Index(s, sep []byte) (res int) {
 				// @ assert 0 <= len(s[i:])-len(sep)+1
 				// @ assert len(sep) <= len(s[i:])+1
 				r := bytealg.Index(s[i:], sep)
-
 
 				if r >= 0 {
 					// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, r)
