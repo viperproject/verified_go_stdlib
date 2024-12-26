@@ -2446,7 +2446,7 @@ func Index(s, sep []byte) (res int) {
 		t := len(s) - n + 1
 		fails := 0
 
-		// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
+		// @ lemmaNotFoundInEmptyPrefix(sl.View(s), sl.View(sep))
 
 		// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
 		// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R40)
@@ -2529,12 +2529,15 @@ func Index(s, sep []byte) (res int) {
 				// @ unfold acc(sl.Bytes(s, 0, len(s)), R41)
 				// @ SubSliceOverlaps(s, i, len(s))
 				// @ fold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
+				// @ assert 0 <= len(s[i:])-len(sep)+1
+				// @ assert len(sep) <= len(s[i:])+1
 				r := bytealg.Index(s[i:], sep)
+
 
 				if r >= 0 {
 					// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, r)
 					// @ lemmaViewSubslice(s, i, len(s))
-					// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, r)
+					// @ lemmaSubstNotFoundInPrefix(sl.View(s[i:]), vs[i:], vsep, r)
 					// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, r)
 					// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 					// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2545,7 +2548,7 @@ func Index(s, sep []byte) (res int) {
 				}
 				// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, len(s[i:])-len(sep)+1)
 				// @ lemmaViewSubslice(s, i, len(s))
-				// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, len(s[i:])-len(sep)+1)
+				// @ lemmaSubstNotFoundInPrefix(sl.View(s[i:]), vs[i:], vsep, len(s[i:])-len(sep)+1)
 				// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, len(s[i:])-len(sep)+1)
 				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
 				// @ fold acc(sl.Bytes(s, 0, len(s)), R41)
@@ -2565,7 +2568,7 @@ func Index(s, sep []byte) (res int) {
 	i := 0
 	fails := 0
 	t := len(s) - n + 1
-	// @ assert reveal NotFoundInPrefix(sl.View(s), sl.View(sep), i)
+	// @ lemmaNotFoundInEmptyPrefix(sl.View(s), sl.View(sep))
 	// @ ghost vsep := sl.View(sep)
 	// @ ghost vs := sl.View(s)
 	// @ invariant acc(sl.Bytes(s, 0, len(s)), R40)
@@ -2655,7 +2658,7 @@ func Index(s, sep []byte) (res int) {
 			if j < 0 {
 				// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, len(s[i:])-len(sep)+1)
 				// @ lemmaViewSubslice(s, i, len(s))
-				// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, len(s[i:])-len(sep)+1)
+				// @ lemmaSubstNotFoundInPrefix(sl.View(s[i:]), vs[i:], vsep, len(s[i:])-len(sep)+1)
 				// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, len(s[i:])-len(sep)+1)
 
 				// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)
@@ -2668,7 +2671,7 @@ func Index(s, sep []byte) (res int) {
 
 			// @ assert NotFoundInPrefix(sl.View(s[i:]), vsep, j)
 			// @ lemmaViewSubslice(s, i, len(s))
-			// @ lemmaWhat(sl.View(s[i:]), vs[i:], vsep, j)
+			// @ lemmaSubstNotFoundInPrefix(sl.View(s[i:]), vs[i:], vsep, j)
 			// @ assert NotFoundInPrefix(sl.View(s)[i:], vsep, j)
 
 			// @ unfold acc(sl.Bytes(s[i:], 0, len(s[i:])), R41)

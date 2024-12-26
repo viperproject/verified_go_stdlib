@@ -191,6 +191,12 @@ func lemmaCountSepFound(s, sep seq[byte], indices set[int], idx, k, i int) {
 
 
 ghost
+requires a + 1 <= b
+ensures  a < b
+decreases
+func lemmaLeqToLt(a, b int) { }
+
+ghost
 requires bp < lnb
 requires bp == lb * i
 requires lnb == lb * count
@@ -200,6 +206,9 @@ decreases
 func lemmaStillHaveToRepeat(i, count, bp, lb, lnb int) {
 	if lb != 0 {
 		assert lb * i < lnb
+		LemmaLeqTransitive(lb * i+1, lnb, lb*count)
+		assert lb*i + 1 <= lb * count
+		lemmaLeqToLt(lb*i, lb*count)
 		assert lb * i < lb * count
 		LemmaMulInjLtLeftInv(i, count, lb)
 		assert i < count
@@ -230,6 +239,13 @@ func lemmaDidCopy(nb []byte, bp, nCopied int) {
 }
 
 ghost
+requires l1 == l2
+requires h1 == h2
+ensures a[l1:h1] == a[l2:h2]
+decreases
+func lemmaSubstSlicing(a seq[byte], l1, h1, l2, h2 int) { }
+
+ghost
 requires len(nb) == len(b) * count
 requires InRangeInc(bp, 0, len(nb))
 requires InRangeInc(nCopied, 0, bp)
@@ -248,10 +264,17 @@ func lemmaDouble(nb seq[byte], b seq[byte], i, bp, count, nCopied int) {
 		assert nb[:bp] ++ nb[bp:bp+bp] == nb[:bp+bp]
 		assert bp+bp == i*2 * len(b)
 		assert nb[:i * len(b)] ++ nb[:i * len(b)] == nb[:bp+bp]
+		assert count * len(b) >= bp+bp
+		assert len(nb[:bp+bp]) == bp+bp
 		assert (nb[:i * len(b)] ++ nb[:i * len(b)])[:count * len(b)] == nb[:bp+bp]
 		assert MinInt(count, i * 2) == i * 2
 		LemmaMulInjEq(MinInt(count, i * 2), i*2, len(b))
+		x := MinInt(count, i * 2)
+		y := i * 2
+		assert x == y
+		assert x * len(b) == y * len(b)
 		assert MinInt(count, i * 2) * len(b) == (i * 2) * len(b)
+		lemmaSubstSlicing(nb, 0, MinInt(count, i * 2) * len(b), 0, (i*2) * len(b))
 		assert nb[:MinInt(count, i * 2) * len(b)] == nb[: (i*2) * len(b)]
 		assert nb[:bp+bp] == nb[: i*2 * len(b)]
 	} else {
@@ -300,6 +323,7 @@ func lemmaSlicingRepeat(s seq[byte], a, b int) {
 		assert a <= b
 		LemmaMulInjLeq(a, b, len(s))
 		assert a*len(s) <= b*len(s)
+		LemmaLeqTransitive(len(r), a*len(s), b*len(s))
 		assert len(r) <= b * len(s)
 		assert bytes.Repeat(s, a)[:b * len(s)] == bytes.Repeat(s, a)
 		assert MinInt(a, b) == a
@@ -500,6 +524,11 @@ requires s1 == s2
 requires InRangeInc(i, 0, len(s1))
 ensures  NotFoundInPrefix(s1, sep, i) == NotFoundInPrefix(s2, sep, i)
 decreases
-func lemmaWhat(s1, s2, sep seq[byte], i int) {
-	
+func lemmaSubstNotFoundInPrefix(s1, s2, sep seq[byte], i int) { }
+
+ghost
+ensures NotFoundInPrefix(s, sep, 0)
+decreases
+func lemmaNotFoundInEmptyPrefix(s, sep seq[byte]) {
+	assert reveal NotFoundInPrefix(s, sep, 0)
 }
