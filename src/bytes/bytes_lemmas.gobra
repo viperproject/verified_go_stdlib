@@ -224,7 +224,7 @@ requires InRangeInc(bp, 0, len(nb))
 requires InRangeInc(nCopied, 0, bp)
 requires bp + nCopied <= len(nb)
 requires acc(sl.Bytes(nb, 0, len(nb)), R50)
-requires unfolding acc(sl.Bytes(nb, 0, len(nb)), R50) in forall i int :: {&nb[bp:][i]} 0 <= i && i < len(nb[bp:]) ==> &nb[bp:][i] == &nb[i+bp]
+requires SubSliceOverlaps(nb, bp, len(nb))
 requires unfolding acc(sl.Bytes(nb, 0, len(nb)), R50) in forall i int :: {&nb[bp:][i]}{&nb[:bp][i]} 0 <= i && i < nCopied ==>  nb[bp:][i] ==  nb[:bp][i]
 ensures acc(sl.Bytes(nb, 0, len(nb)), R50)
 ensures sl.View(nb)[:nCopied] == sl.View(nb)[bp:bp+nCopied]

@@ -110,4 +110,7 @@ ghost
 requires 0 <= low && low <= high && high <= len(s)
 ensures forall i int :: {&s[low:high][i]} 0 <= i && i < len(s[low:high]) ==> &s[low:high][i] == &s[i+low]
 decreases
-func SubSliceOverlaps(s []byte, low, high int) { }
+pure
+func SubSliceOverlaps(s []byte, low, high int) bool {
+	return true
+}
