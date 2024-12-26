@@ -63,9 +63,9 @@ requires forall j int :: {j in indices} j in indices ==> ( b[j] == c)
 requires forall j int :: {j in indices} !(j in indices) ==> ( j < 0 || len(b) <= j || b[j] != c)
 ensures indices == SpecCountIndices(b, seq[byte]{c}, 0)
 decreases
-func lemmaBytealgCount(indices set[int], b seq[byte], c byte) {
-	TODO() // before implementing this lemma, we should consider changing the specs of bytealg.Count to use SpecCountIndices
-}
+trusted
+// before implementing this lemma, we should consider changing the specs of bytealg.Count to use SpecCountIndices
+func lemmaBytealgCount(indices set[int], b seq[byte], c byte)
 
 // currently unused but might be interesting to expose
 ghost
