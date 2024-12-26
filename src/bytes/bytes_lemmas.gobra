@@ -256,16 +256,6 @@ func lemmaStillHaveToRepeat(i, count, bp, lb, lnb int) {
 
 
 
-// https://github.com/jcp19/verified_go_stdlib/actions/runs/12503483608/job/34883877905
-
-// ghost
-// requires acc(sl.Bytes(nb, 0, len(nb)), _)
-// requires InRangeInc(bp, 0, len(nb))
-// requires SubSliceOverlaps(nb, bp, len(nb))
-// decreases
-// pure func copied(nb []byte, bp, n int) (res bool) {
-// 	return unfolding acc(sl.Bytes(nb, 0, len(nb)), _) in forall i int :: {&nb[bp:][i]}{&nb[:bp][i]} 0 <= i && i < n ==>  nb[bp:][i] ==  nb[:bp][i]
-// }
 
 ghost
 requires InRangeInc(bp, 0, len(nb))
