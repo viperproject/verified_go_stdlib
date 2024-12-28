@@ -99,13 +99,13 @@ func New() (l *List) {
 
 // Len returns the number of elements of list l.
 // The complexity is O(1).
-//@ requires l.Mem(elems, isInit)
-//@ ensures  unfolding l.Mem(elems, isInit) in res == l.lenT
-//@ ensures  unfolding l.Mem(elems, isInit) in !isInit ==> res == 0
+//@ requires acc(l.Mem(elems, isInit), ReadPerm)
+//@ ensures  unfolding acc(l.Mem(elems, isInit), ReadPerm) in res == l.lenT
+//@ ensures  unfolding acc(l.Mem(elems, isInit), ReadPerm) in !isInit ==> res == 0
 //@ decreases
 //@ pure
 func (l *List) Len(/*@ ghost elems set[*Element], isInit bool @*/) (res int) {
-	return /*@ unfolding l.Mem(elems, isInit) in @*/ l.lenT
+	return /*@ unfolding acc(l.Mem(elems, isInit), ReadPerm) in @*/ l.lenT
 }
 
 // Front returns the first element of list l or nil if the list is empty.

@@ -1,0 +1,73 @@
+package bytealg
+
+// +gobra
+
+import (
+	. "verification/utils/definitions"
+	sl "gobra-libs/byteslice"
+	. "bytes/spec"
+)
+
+preserves acc(sl.Bytes(b, 0, len(b)), R50)
+ensures res >= 0
+ensures len(indices) == res
+ensures forall i int :: {i in indices} i in indices ==> 0 <= i && i < len(b)
+ensures forall i int :: {i in indices} i in indices ==> ( sl.Byte(b, 0, len(b), i) == c)
+ensures forall i int :: {i in indices} !(i in indices) ==> ( i < 0 || len(b) <= i || sl.Byte(b, 0, len(b), i) != c)
+trusted
+decreases
+func Count(b []byte, c byte) (res int , ghost indices set[int])
+
+const MaxBruteForce = 64
+
+trusted
+decreases
+func Cutover(n int) int
+
+requires 2 <= len(b) && len(b) <= MaxLen
+preserves acc(sl.Bytes(a, 0, len(a)), R45)
+preserves acc(sl.Bytes(b, 0, len(b)), R45)
+ensures 0 <= res && res + len(b) <= len(a)
+ensures res != -1 ==> View(a)[res:res+len(b)] == View(b)
+ensures res == -1 ==> !exists i int :: {View(a)[i:i+len(b)]} View(a)[i:i+len(b)] == View(b)
+ensures res != -1 ==> forall i int :: {View(a)[i:i+len(b)]} 0 <= i && i < res ==> View(a)[i:i+len(b)] != View(b)
+trusted
+decreases
+func Index(a, b []byte) (res int)
+
+func IndexString(a, b string) int
+
+preserves acc(sl.Bytes(b, 0, len(b)), R50)
+ensures 0 <= res && res < len(b)
+ensures res != -1 == ((forall i int :: {View(b)[i]} 0 <= i && i < res ==> View(b)[i] != c) && View(b)[res] == c)
+ensures res == -1 == (forall i int :: {View(b)[i]} 0 <= i && i < len(b) ==> View(b)[i] != c)
+trusted
+decreases
+func IndexByte(b []byte, c byte) (res int)
+trusted
+decreases
+func IndexByteString(s string, c byte) int
+
+preserves acc(sl.Bytes(a, 0, len(a)), R40)
+preserves acc(sl.Bytes(b, 0, len(b)), R40)
+trusted
+decreases
+func Compare(a, b []byte) int
+
+var MaxLen int
+
+const PrimeRK = 16777619
+
+trusted
+decreases
+func HashStrRevBytes(sep []byte) (uint32, uint32)
+
+preserves acc(sl.Bytes(s, 0, len(s)), R50)
+preserves acc(sl.Bytes(sep, 0, len(sep)), R50)
+ensures 0 <= res && res + len(sep) <= len(s)
+ensures res != -1 ==> View(s)[res:res+len(sep)] == View(sep)
+ensures res == -1 ==> !exists i int :: {View(s)[i:i+len(sep)]} View(s)[i:i+len(sep)] == View(sep)
+ensures res != -1 ==> forall i int :: {View(s)[i:i+len(sep)]} 0 <= i && i < res ==> View(s)[i:i+len(sep)] != View(sep)
+trusted
+decreases
+func IndexRabinKarpBytes(s, sep []byte) (res int)

@@ -1,0 +1,101 @@
+package spec
+
+// +gobra
+
+import (
+	sl "gobra-libs/byteslice"
+)
+
+ghost
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
+ensures len(res) == len(ub)
+ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
+    res[i] == sl.Byte(ub, 0, len(ub), i)
+decreases _
+pure func View(ub []byte) (res seq[byte])
+
+// TODO: make this opaque
+ghost
+requires count >= 0
+decreases count
+pure func SpecRepeat(b seq[byte], count int) (res seq[byte]) {
+	return count == 0 ? seq[byte]{} : ( b ++ SpecRepeat(b, count - 1) )
+}
+
+ghost
+decreases _
+pure func SpecSplit(b, sep seq[byte]) (res seq[seq[byte]]) {
+	return SpecSplitInner(b, sep, seq[byte]{})
+}
+
+ghost
+decreases _
+pure func SpecSplitInner(s, sep, ac seq[byte]) (res seq[seq[byte]]) {
+	return len(s) == 0 ?
+		( len(ac) == 0 ?
+			seq[seq[byte]]{} :
+			seq[seq[byte]]{ac}) :
+		( sep == s ?
+			seq[seq[byte]]{ ac, seq[byte]{} } :
+			s[:len(sep)] == sep ?
+				seq[seq[byte]]{ac} ++ SpecSplitInner(s[len(sep):], sep, seq[byte]{}) :
+				SpecSplitInner(s[1:], sep, ac ++ seq[byte]{s[0]}))
+}
+
+ghost
+requires 0 < len(s)
+ensures 0 < len(SpecSplit(s, sep))
+decreases
+func LemmaSpecSplitNonEmpty(s, sep seq[byte]) {
+	lemmaSpecSplitInnerNonEmpty(s, sep, seq[byte]{})
+}
+
+ghost
+requires 0 < len(ac)
+ensures 0 < len(SpecSplitInner(s, sep, ac))
+decreases len(s)
+func lemmaSpecSplitInnerAcNonEmpty(s, sep, ac seq[byte]) {
+	switch {
+	case len(s) == 0:
+		assert len(SpecSplitInner(s, sep, ac)) == 1
+	case sep == s:
+		assert len(SpecSplitInner(s, sep, ac)) == 2
+	case s[:len(sep)] == sep:
+		assert len(SpecSplitInner(s, sep, ac)) >= 1
+	default:
+		lemmaSpecSplitInnerAcNonEmpty(s[1:], sep, ac ++ seq[byte]{s[0]})
+	}
+}
+
+ghost
+requires 0 < len(s)
+ensures 0 < len(SpecSplitInner(s, sep, ac))
+decreases
+func lemmaSpecSplitInnerNonEmpty(s, sep, ac seq[byte]) {
+	switch {
+	case sep == s:
+		assert len(SpecSplitInner(s, sep, ac)) == 2
+	case s[:len(sep)] == sep:
+		assert len(SpecSplitInner(s, sep, ac)) >= 1
+	default:
+		lemmaSpecSplitInnerAcNonEmpty(s[1:], sep, ac ++ seq[byte]{s[0]})
+	}
+}
+
+
+ghost
+requires low <= high
+ensures res == exists i int :: {i in s} i in s && low <= i && i < high
+opaque
+decreases high - low
+pure func SetContainsInRange(s set[int], low, high int) (res bool) {
+	return low < high && (low in s || ( low < high && SetContainsInRange(s, low + 1, high) ))
+}
+
+// returns true if a == a0 ++ b ++ a1 for some a0, a1
+ghost
+requires 0 <= i && i + len(b) <= len(a)
+decreases
+pure func SubviewEq(a, b seq[byte], i int) (res bool) {
+	return a[i:i+len(b)] == b
+}

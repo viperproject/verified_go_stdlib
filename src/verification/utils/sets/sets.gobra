@@ -1,0 +1,12 @@
+// +gobra
+
+package sets
+
+ghost
+requires start <= end
+ensures len(res) == end - start
+ensures forall i int :: {i in res} (i in res) == (start <= i && i < end)
+decreases end - start
+pure func RangeInt(start, end int) (res set[int]) {
+	return start == end ? set[int]{} : set[int]{start} union RangeInt(start + 1, end)
+}

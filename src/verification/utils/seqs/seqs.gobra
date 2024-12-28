@@ -1,0 +1,58 @@
+// Copyright 2022-2023 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package seqs
+
+import sl "verification/utils/slices"
+
+ghost
+pure
+requires 0 <= n
+ensures  len(res) == n
+ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==> !res[i]
+decreases _
+func NewSeqBool(n int) (res seq[bool])
+
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == byte(0)
+decreases _
+pure func NewSeqByte(size int) (res seq[byte])
+
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
+decreases _
+pure func NewSeqByteSlice(size int) (res seq[[]byte])
+
+ghost
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
+ensures len(res) == len(ub)
+ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
+    res[i] == sl.GetByte(ub, 0, len(ub), i)
+decreases _
+pure func ToSeqByte(ub []byte) (res seq[byte])
+
+
+// returns a new sequence, where each element is trimmed by n elements, from the end
+ghost
+opaque
+decreases _
+pure func TrimEachSuffix_byte(s seq[seq[byte]], n int) seq[seq[byte]] {
+	return len(s) == 0 ? seq[seq[byte]]{} : ( TrimEachSuffix_byte(s[:len(s) - 1], n) ++ (seq[seq[byte]]{ s[0][:len(s) - n] }) )
+}

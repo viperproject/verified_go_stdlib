@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout the verified_go_stdlib repository
         uses: actions/checkout@v3
+        with:
+          submodules: 'true'
       - name: Cache the verification results
         uses: actions/cache@v3
         env:
@@ -46,8 +48,28 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           statsFile: '/stats/stats_list.json'
+      - name: Verify package 'bytes'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'src/bytes'
+          timeout: 40m
+          headerOnly: ${{ env.headerOnly }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          statsFile: '/stats/stats_list.json'
+      - name: Verify package 'path'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'src/path'
+          timeout: 40m
+          headerOnly: ${{ env.headerOnly }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          statsFile: '/stats/stats_list.json'
       - name: Upload the verification report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: stats_list.json
           path: /stats/stats_list.json

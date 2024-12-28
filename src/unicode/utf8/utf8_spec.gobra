@@ -1,0 +1,67 @@
+package utf8
+//+gobra
+
+import (
+	. "verification/utils/definitions"
+	sl "gobra-libs/byteslice"
+)
+
+// utf8.Codepoints(s) returns the sequence of (utf-8 encoded) codepoints in `s`
+ghost
+pure
+ensures 0 < len(s) ==> 0 < len(res)
+ensures 0 == len(s) ==> 0 == len(res)
+trusted
+decreases
+func Codepoints(s []byte) (res seq[rune])
+
+
+const (
+	RuneError = '\uFFFD'
+	RuneSelf  = 0x80
+	MaxRune   = '\U0010FFFF'
+	UTFMax    = 4
+)
+
+// AppendRune appends the UTF-8 encoding of r to the end of p and
+// returns the extended buffer. If the rune is out of range,
+// it appends the encoding of [RuneError].
+func AppendRune(p []byte, r rune) []byte
+
+preserves acc(sl.Bytes(p, 0, len(p)), R40)
+ensures len(p) > 0 ==> 1 <= size && size <= len(p)
+ensures len(p) == 0 ==> size == 0
+ensures len(p) > 0 ==> Codepoints(p)[0] == r && Codepoints(p[size:]) == Codepoints(p)[1:]
+trusted
+decreases
+func DecodeRune(p []byte) (r rune, size int)
+
+preserves forall i int :: {&p[i]} 0 <= i && i < len(p) ==> acc(&p[i], R50)
+ensures 1 <= size && size <= len(p)
+trusted
+decreases
+func DecodeLastRune(p []byte) (r rune, size int)
+trusted
+decreases
+func RuneLen(r rune) int
+
+requires forall i int :: {&p[i]} 0 <= i && i < len(p) ==> acc(&p[i])
+ensures forall i int :: {&p[i]} 0 <= i && i < len(p) ==> acc(&p[i])
+ensures 0 <= n && n <= UTFMax
+trusted
+decreases
+func EncodeRune(p []byte, r rune) (n int)
+
+preserves acc(sl.Bytes(p, 0, len(p)), R50)
+ensures 0 <= res && res < len(p)
+ensures len(p) > 0 ==> res > 0
+ensures res == len(Codepoints(p))
+ensures len(indices) == res
+ensures forall i int :: {i in indices} i in indices ==> 0 <= i && i < len(p)
+trusted
+decreases
+func RuneCount(p []byte) (res int , ghost indices set[int])
+
+trusted
+decreases
+func ValidRune(r rune) (res bool)

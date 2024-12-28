@@ -1,0 +1,1050 @@
+package path
+
+//+gobra
+
+import (
+	bytes "gobra-libs/bytes"
+	sl "gobra-libs/byteslice"
+	.  "verification/utils/definitions"
+)
+
+pred Lazybuf(b *lazybuf, p perm) {
+	0 < p &&
+	acc(b) &&
+	0 < len(b.s) &&
+	(b.buf != nil ==> InRangeInc(b.w, 0, len(b.buf))) &&
+	InRangeInc(b.w, 0, len(b.s)) &&
+	(b.buf == nil || len(b.buf) == len(b.s)) &&
+	acc(sl.Bytes(b.s, 0, len(b.s)), p) &&
+	sl.Bytes(b.buf, 0, len(b.buf))
+}
+
+ghost
+requires Lazybuf(b, R41)
+decreases
+pure func lazybufInvariant(b *lazybuf) (res bool) {
+	// return (getS(b)[:getW(b)] == getValue(b)) == bufIsEmpty(b) &&
+	// return true &&
+	// 	bufIsEmpty(b) == (unfolding Lazybuf(b, R41) in b.buf == nil)
+	return true
+}
+
+type Segment seq[byte]
+
+// type path adt {
+// 	Rooted { parts seq[segment] }
+// 	Relative { parts seq[segment] }
+// }
+
+type Path struct {
+	ghost parts  seq[Segment]
+	rooted bool
+}
+
+
+ghost
+requires len(p.parts) > 0
+decreases
+pure func (p Path) dirname() (res seq[Segment]) {
+	return p.parts[:len(p.parts)-1]
+}
+
+ghost
+requires len(p.parts) > 0
+decreases
+pure func (p Path) basename() (res Segment) {
+	return p.parts[len(p.parts)-1]
+}
+
+ghost
+decreases
+pure func (p Path) IsAbs() (res bool) {
+	return p.rooted
+}
+
+ghost
+decreases
+pure func newPath(rooted bool) (res Path) {
+	return Path{parts: seq[Segment]{}, rooted: rooted}
+}
+
+ghost
+decreases
+pure func pathAppend(p Path, s Segment) (res Path) {
+	return Path{
+		parts: p.parts ++ seq[Segment]{s},
+		rooted: p.rooted,
+	}
+}
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+decreases
+pure func getW(b *lazybuf) (res int) {
+	return unfolding acc(Lazybuf(b, R41), _) in b.w
+}
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+ensures len(res) == getW(b)
+decreases
+pure func getValue(b *lazybuf) (res seq[byte]) {
+	return unfolding acc(Lazybuf(b, R41), _) in b.buf == nil ?
+		sl.View(b.s)[:b.w] :
+		sl.View(b.buf)[:b.w]
+}
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+ensures len(res) == len(getS(b))
+decreases
+pure func (b *lazybuf) valueUntrimmed() (res seq[byte]) {
+	return unfolding acc(Lazybuf(b, R41), _) in b.buf == nil ?
+		sl.View(b.s) :
+		sl.View(b.buf)
+}
+
+ghost
+decreases
+pure func isRooted(p seq[byte]) (res bool) {
+	return len(p) > 0 && p[0] == '/'
+}
+
+ghost
+decreases
+pure func pathContents(p seq[byte]) (res seq[byte]) {
+	return isRooted(p) ?
+		p[1:] :
+		p
+}
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+decreases
+pure func (b *lazybuf) Path() (res Path) {
+	// return toPath( bytes.Split(pathContents(getValue(b)), seq[byte]{'/'} ), isRooted(getValue(b)))
+	// return toPath( bytes.Split(seq[byte]{}) , isRooted(getValue(b)))
+	return ToPath(getValue(b))
+}
+
+ghost
+ensures res.rooted == isRooted(path)
+decreases
+pure func ToPath(path seq[byte]) (res Path) {
+	return toPath( bytes.Split(pathContents(path), seq[byte]{'/'} ), isRooted(path))
+	// return toPath( bytes.Split(pathContents(path), seq[byte]{'/'} ), isRooted(path))
+}
+
+ghost
+ensures res.rooted == rooted
+ensures res.parts == flat
+decreases len(flat)
+pure func toPath(flat seq[seq[byte]], rooted bool) (res Path) {
+	return len(flat) == 0 ?
+		newPath(rooted) :
+		pathAppend( toPath(flat[:len(flat)-1], rooted), flat[len(flat)-1] )
+}
+
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+requires InRange(i, 0, len(getS(b)))
+decreases
+pure func (b *lazybuf) specIndex(i int) (res byte) {
+	return b.valueUntrimmed()[i]
+}
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+decreases
+pure func getS(b *lazybuf) (res seq[byte]) {
+	return unfolding acc(Lazybuf(b, R41), _) in
+		sl.View(b.s)
+}
+
+// ghost
+// decreases
+// pure func (b *lazybuf)
+
+ghost
+requires acc(Lazybuf(b, R41), _)
+decreases
+pure func bufIsEmpty(b *lazybuf) (res bool) {
+	return unfolding acc(Lazybuf(b, R41), _) in
+		len(b.buf) == 0
+}
+
+ghost
+requires 0 < len(s)
+decreases
+pure func lastByte(s seq[byte]) (res byte) {
+	return s[len(s) - 1]
+}
+
+ghost
+requires rooted ==> 1 <= len(path)
+decreases
+pure func noTrailingSlash(path seq[byte], rooted bool) (res bool) {
+	return rooted ?
+		len(path) != 1 ==> lastByte(path) != '/' :
+		len(path) != 0 ==> lastByte(path) != '/'
+}
+
+ghost
+ensures res == forall i int :: { path[i] } InRange(i, 1, len(path)) ==> path[i] == '/' ==> path[i-1] != '/'
+decreases len(path)
+pure func noDoubleSlash(path seq[byte]) (res bool) {
+	return len(path) <= 1 ||
+	((path[len(path) - 1] == '/' ==> path[len(path) - 2] != '/') &&
+		noDoubleSlash(path[:len(path)-1]))
+}
+
+ghost
+decreases
+pure func dotdotInvariant(dotdot int, rooted bool, buf seq[byte]) (res bool) {
+	return InRangeInc(dotdot, rooted ? 1 : 0, len(buf)) &&
+	(dotdot == (rooted ? 1 : 0) || buf[dotdot-1] != '/')
+}
+
+ghost
+decreases
+pure func startIndex(rooted bool) (res int) {
+	return rooted ? 1 : 0
+}
+
+ghost
+requires InRangeInc(r, 0, len(path))
+decreases
+pure func haveReadEntireSegment(path seq[byte], r int) (res bool) {
+	return r == len(path) ||
+		r == 0 ||
+		path[r-1] == '/' ||
+		isCurrentDir(path, r)
+}
+
+ghost
+requires InRange(r, 1, len(path))
+decreases
+pure func isCurrentDir(path seq[byte], r int) (res bool) {
+	return path[r] == '/' &&
+		path[r-1] == '.' &&
+		(r == 1 || path[r-2] == '/')
+}
+
+ghost
+requires rooted ==> InRangeInc(r, 1, len(path))
+requires !rooted ==> InRangeInc(r, 0, len(path))
+decreases
+pure func noIncompleteRead(path seq[byte], r int, rooted bool) (res bool) {
+	return rooted ?
+		haveReadEntireSegment(path[1:], r-1) :
+		haveReadEntireSegment(path, r)
+}
+
+ghost
+requires noDoubleSlash(prev)
+requires InRange(w, 0, len(prev))
+requires rooted ==> 1 <= w
+requires prev[w] == '/'
+ensures noTrailingSlash(prev[:w], rooted)
+decreases
+func lemmaNoTrailingSlash(prev seq[byte], w int, rooted bool) {
+	if len(prev) <= 1 {
+		assert noTrailingSlash(prev[:w], rooted)
+		return
+	}
+}
+
+ghost
+requires a <= b && b <= c
+ensures a <= c
+decreases
+func lemmaLeqTransitive(a, b, c int) {
+	
+}
+
+ghost
+requires aLast != bLast
+ensures a ++ seq[byte]{aLast} != b ++ seq[byte]{bLast}
+decreases
+func lemmaSlicesIneqLastElem(a, b seq[byte], aLast, bLast byte) {
+	if a == b {
+		newa := a ++ seq[byte]{aLast}
+		newb := b ++ seq[byte]{bLast}
+		i := len(newa)-1
+		assert newa[i] != newb[i]
+		assert newa != newb
+	} else {
+		assert a ++ seq[byte]{aLast} != b ++ seq[byte]{bLast}
+	}
+}
+
+ghost
+requires InRangeInc(r, 0, len(p))
+decreases
+pure func readingIsAheadOfWriting(p seq[byte], w, r int, rooted bool) (res bool) {
+	return r == len(p)|| p[r] == '/' || (w != startIndex(rooted) ==> w < r)
+}
+
+ghost
+requires forall i int :: {&a[i]} 0 <= i && i < len(a) ==> acc(&a[i], _)
+requires forall i int :: {&b[i]} 0 <= i && i < len(b) ==> acc(&b[i], _)
+ensures res == (len(a) == len(b) && forall i int :: {&a[i]}{&b[i]} InRange(i, 0, len(a)) ==> &a[i] == &b[i] )
+decreases len(a) + len(b)
+pure func sameSlice(a, b []byte) (res bool) {
+	return (len(a) == 0 || len(b) == 0 ) ?
+		(len(a) == 0 && len(b) == 0) :
+		(&a[len(a)-1] == &b[len(b)-1] && sameSlice(a[:len(a)-1], b[:len(b)-1]))
+}
+
+ghost
+ensures len(res) == 2
+decreases
+pure func dotdot() (res Segment) {
+	return seq[byte]{'.', '.'}
+}
+
+ghost
+ensures len(res) == 1
+decreases
+pure func dot() (res Segment) {
+	return seq[byte]{'.'}
+}
+
+ghost
+ensures forall i int :: {res.parts[i]} InRange(i, 0, len(res.parts)) ==> len(res.parts[i]) != 0
+decreases
+pure func SpecClean(p Path) (res Path) {
+	return (!p.rooted && len(p.parts) == 0) ?
+		Path  { rooted: false, parts: seq[Segment]{dot()} } :
+		p.rooted ?
+			Path { rooted: true, parts: SpecCleanRooted(p.parts, seq[Segment]{}) } :
+			Path { rooted: false, parts: SpecCleanRelative(p.parts, seq[Segment]{}) }
+}
+
+var empty Segment = seq[byte]{}
+
+ghost
+requires forall i int :: { accum[i] } InRange(i, 0, len(accum)) ==> len(accum[i]) != 0
+ensures forall i int :: { res[i] } InRange(i, 0, len(res)) ==> len(res[i]) != 0
+decreases len(p)
+pure func SpecCleanRooted(p, accum seq[Segment]) (res seq[Segment]) {
+	return len(p) == 0 ?
+		accum :
+		(p[0] == dotdot() && len(accum) == 0) || p[0] == dot() || len(p[0]) == 0 ?
+			SpecCleanRooted(p[1:], accum) :
+			p[0] == dotdot() ?
+				SpecCleanRooted(p[1:], accum[:len(accum)-1]) :
+				SpecCleanRooted(p[1:], accum ++ seq[Segment]{ p[0] })
+}
+
+ghost
+requires forall i int :: { accum[i] } InRange(i, 0, len(accum)) ==> len(accum[i]) != 0
+ensures forall i int :: { res[i] } InRange(i, 0, len(res)) ==> len(res[i]) != 0
+decreases len(p)
+pure func SpecCleanRelative(p, accum seq[Segment]) (res seq[Segment]) {
+	return len(p) == 0 ?
+		accum :
+		(p[0] == dotdot()) && (len(accum) == 0 || accum[len(accum)-1] == dotdot()) ?
+			SpecCleanRelative(p[1:], accum ++ seq[Segment]{dotdot()}) :
+			p[0] == dotdot() ?
+				SpecCleanRelative(p[1:], accum ++ seq[Segment]{dotdot()}) :
+				(p[0] == dot() || len(p[0]) == 0) ?
+					SpecCleanRelative(p[1:], accum) :
+					SpecCleanRelative(p[1:], accum ++ seq[Segment]{p[0]})
+}
+
+ghost
+decreases
+pure func isCompleted(p seq[byte]) (res bool) {
+	return len(p) == 0 || p[len(p)-1] == '/'
+}
+
+ghost
+requires InRangeInc(r, 0, len(p))
+decreases
+pure func willBeCompleted(p seq[byte], r int) (res bool) {
+	return len(p) == r || p[r] == '/'
+}
+
+ghost
+requires rooted ==> 1 <= len(p)
+requires rooted ==> p[0] == '/'
+requires !rooted && 1 <= len(p) ==> p[0] != '/'
+requires noTrailingSlash(p, rooted)
+ensures ToPath(p).parts == seq[seq[byte]]{ seq[byte]{} } || len(ToPath(p).basename()) != 0
+decreases
+func lemmaNoTrailingSlashPath(p seq[byte], rooted bool) {
+	switch {
+		case rooted && len(p) == 1:
+		case !rooted && len(p) == 0:
+
+		default:
+			assert lastByte(p) != '/'
+			lemmaToPathNonEmpty(p)
+			lemmaToPathHasTail(p)
+			assert len(ToPath(p).basename()) != 0
+	}
+}
+
+
+// ToPath lemmas:
+
+ghost
+requires 0 < len(p)
+requires p[0] == '/' ==> 1 < len(p)
+ensures len(ToPath(p).parts) != 0
+decreases
+func lemmaToPathNonEmpty(p seq[byte]) {
+	sep := seq[byte]{'/'}
+	if p[0] == '/' {
+		assert ToPath(p) == toPath(bytes.Split(pathContents(p), sep), isRooted(p))
+		assert pathContents(p) == p[1:]
+		assert isRooted(p)
+
+		ghost split := bytes.Split(p[1:], sep)
+		assert len(p[1:]) != 0
+		// bytes.LemmaSplitNonEmpty(p[1:], sep)
+		assert 0 < len(split)
+	} else {
+		assert ToPath(p) == toPath(bytes.Split(pathContents(p), sep), isRooted(p))
+		assert pathContents(p) == p
+		assert !isRooted(p)
+
+		ghost split := bytes.Split(p, sep)
+		// bytes.LemmaSplitNonEmpty(p, sep)
+	}
+}
+
+ghost
+requires 0 < len(p)
+requires lastByte(p) != '/'
+ensures len(ToPath(p).parts) > 0
+decreases
+func lemmaToPathWithoutTrailingSlash(p seq[byte]) {
+	assert p[0] == '/' ==> 1 < len(p)
+	lemmaToPathNonEmpty(p)
+}
+
+ghost
+requires 0 < len(s)
+requires add != '/'
+requires res1 == bytes.Split(s, seq[byte]{'/'})
+requires res2 == bytes.Split(s ++ seq[byte]{add}, seq[byte]{'/'})
+ensures len(res1) == len(res2)
+ensures 0 < len(res1)
+ensures res1[:len(res1)-1] == res2[:len(res2)-1]
+ensures res1[len(res1)-1] ++ seq[byte]{add} == res2[len(res2)-1]
+decreases
+func lemmaSplitAddNonSep(s seq[byte], add byte, res1, res2 seq[seq[byte]]) {
+	lemmaSplitInnerAddNonSep(s, seq[byte]{}, add, res1, res2)
+}
+
+ghost
+requires 0 < len(s)
+requires add != '/'
+requires res1 == bytes.SplitInner(s, seq[byte]{'/'}, ac)
+requires res2 == bytes.SplitInner(s ++ seq[byte]{add}, seq[byte]{'/'}, ac)
+ensures len(res1) == len(res2)
+ensures 0 < len(res1)
+ensures res1[:len(res1)-1] == res2[:len(res2)-1]
+ensures res1[len(res1)-1] ++ seq[byte]{add} == res2[len(res2)-1]
+decreases len(s)
+func lemmaSplitInnerAddNonSep(s, ac seq[byte], add byte, res1, res2 seq[seq[byte]]) {
+	sep := seq[byte]{'/'}
+	added := s ++ seq[byte]{add}
+	switch {
+	case s == sep:
+		assert added == seq[byte]{'/', add}
+
+		assert bytes.SplitInner(seq[byte]{}, sep, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}}
+		assert sep[1:] == seq[byte]{}
+		assert res1 == seq[seq[byte]]{ ac, seq[byte]{} }
+
+		assert bytes.SplitInner(added, sep, ac) == seq[seq[byte]]{ac} ++ bytes.SplitInner(added[1:], sep, seq[byte]{} )
+		assert added[1:] == seq[byte]{add}
+		assert bytes.SplitInner(added[1:], sep, seq[byte]{}) == bytes.SplitInner(seq[byte]{add}, sep, seq[byte]{})
+		assert seq[byte]{add} != sep
+		assert seq[byte]{add}[:1] != sep
+		assert seq[byte]{add}[1:] == seq[byte]{}
+		assert bytes.SplitInner(seq[byte]{add}, sep, seq[byte]{}) == bytes.SplitInner(seq[byte]{}, sep, seq[byte]{add})
+		assert bytes.SplitInner(seq[byte]{}, sep, seq[byte]{add}) == seq[seq[byte]]{ seq[byte]{add} }
+
+		assert res2 == seq[seq[byte]]{ac, seq[byte]{add}}
+
+		assert res1[len(res1)-1] ++ seq[byte]{add} == res2[len(res2)-1]
+		assert res1[:len(res1)-1] == res2[:len(res2)-1]
+	case s[:len(sep)] == sep:
+
+
+		assert res1 == seq[seq[byte]]{ac} ++ bytes.SplitInner(s[len(sep):], sep, seq[byte]{})
+		assert res2 == seq[seq[byte]]{ac} ++ bytes.SplitInner(added[len(sep):], sep, seq[byte]{})
+		assert s[len(sep):] ++ seq[byte]{add} == added[len(sep):]
+		r1 := bytes.SplitInner(s[len(sep):], sep, seq[byte]{})
+		r2 := bytes.SplitInner(added[len(sep):], sep, seq[byte]{})
+
+		lemmaSplitInnerAddNonSep(s[len(sep):], seq[byte]{}, add, r1, r2)
+
+
+		assert res1[len(res1)-1] ++ seq[byte]{add} == res2[len(res2)-1]
+		assert res1[:len(res1)-1] == res2[:len(res2)-1]
+	case len(s) == 1:
+		assert res1 == bytes.SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]})
+		assert res2 == bytes.SplitInner(added[1:], sep, ac ++ seq[byte]{added[0]})
+
+		assert s[1:] == seq[byte]{}
+		assert bytes.SplitInner(seq[byte]{}, sep, ac ++ seq[byte]{s[0]}) == seq[seq[byte]]{ ac ++ seq[byte]{s[0]} }
+		assert res1 == seq[seq[byte]]{ ac ++ seq[byte]{s[0]} }
+
+		assert added[1:] == seq[byte]{add}
+		assert bytes.SplitInner(seq[byte]{add}, sep, ac ++ seq[byte]{added[0]}) == bytes.SplitInner(seq[byte]{add}[1:], sep, ac ++ seq[byte]{added[0]} ++ seq[byte]{added[1]} )
+
+
+		assert res1[len(res1)-1] ++ seq[byte]{add} == res2[len(res2)-1]
+		assert res1[:len(res1)-1] == res2[:len(res2)-1]
+	default:
+
+		assert len(s) >= 2
+
+		assert res1 == bytes.SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]})
+		assert res2 == bytes.SplitInner(added[1:], sep, ac ++ seq[byte]{added[0]})
+		
+		r1 := bytes.SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]})
+		r2 := bytes.SplitInner(added[1:], sep, ac ++ seq[byte]{added[0]}) 
+
+		assert s[1:] ++ seq[byte]{add} == added[1:]
+
+		lemmaSplitInnerAddNonSep(s[1:], ac ++ seq[byte]{added[0]}, add, res1, res2)
+		assert res1[len(res1)-1] ++ seq[byte]{add} == res2[len(res2)-1]
+		assert res1[:len(res1)-1] == res2[:len(res2)-1]
+	}
+}
+
+
+
+// ghost
+// requires 0 < len(p)
+// requires p[len(p)-1] != '/'
+// ensures 0 < len(bytes.Split(p, seq[byte]{'/'}))
+// ensures 0 < len(bytes.Split(p, seq[byte]{'/'})[len(bytes.Split(p, seq[byte]{'/'}))-1])
+// decreases len(p)
+// func lemmaSplitNoTrailingSlash(p seq[byte]) {
+// 	bytes.LemmaSplitNonEmpty(p, seq[byte]{'/'})
+// 	res := bytes.Split(p, seq[byte]{'/'})
+// 	sep := seq[byte]{'/'}
+//
+// 	assert p != sep
+// 	if p[:1] == sep {
+// 		assert len(p[1:]) != 0
+// 		res2 := bytes.SplitInner(p[1:], sep, seq[byte]{})
+// 		assert res[1:] == res2
+// 		lemmaSplitNoTrailingSlash(p[1:])
+// 		assert res[len(res)-1] == res2[len(res2)-1]
+// 		assert 0 < len(res[len(res)-1])
+// 	} else {
+// 		if len(p[1:]) == 0 {
+// 			assert res == bytes.SplitInner(p[1:], sep, seq[byte]{p[0]})
+// 			res2 := bytes.SplitInner(p[1:], sep, seq[byte]{p[0]})
+// 			assert res2[len(res2)-1] == seq[byte]{p[0]}
+//
+// 			assert 0 < len(res[len(res)-1])
+// 		} else {
+// 			lemmaSplitNoTrailingSlash(p[1:])
+// 			assert res == bytes.SplitInner(p[1:], sep, seq[byte]{p[0]})
+//
+//
+// 			assert 0 < len(res[len(res)-1])
+// 		}
+// 		assert 0 < len(res[len(res)-1])
+// 	}
+//
+// 	assert 0 < len(res[len(res)-1])
+// }
+
+ghost
+requires 0 < len(p)
+requires lastByte(p) != '/'
+ensures len(ToPath(p).parts) > 0
+ensures len(ToPath(p).basename()) != 0
+decreases
+func lemmaToPathHasTail(p seq[byte]) {
+	// lemmaToPathWithoutTrailingSlash(p)
+	// lemmaSplitNoTrailingSlash(p)
+
+
+	add := p[len(p)-1]
+	s := p[:len(p)-1]
+	sep := seq[byte]{'/'}
+
+	if len(p) == 1 {
+		assert pathContents(p) == p
+		assert isRooted(p) == false
+		assert bytes.Split(p, sep) == bytes.SplitInner(p, sep, seq[byte]{})
+		assert p != sep
+		assert p[:1] != sep
+		assert bytes.SplitInner(p, sep, seq[byte]{}) == bytes.SplitInner(p[1:], sep, seq[byte]{ p[0] })
+		assert p[1:] == seq[byte]{}
+		assert bytes.SplitInner(seq[byte]{}, sep, seq[byte]{ p[0] }) == seq[seq[byte]]{ seq[byte]{ p[0] } }
+		assert seq[byte]{ p[0] } == p
+		assert bytes.Split(p, sep) == seq[seq[byte]]{ p }
+		
+	} else {
+		res1 := bytes.Split(s, seq[byte]{'/'})
+		assert p == s ++ seq[byte]{add}
+		res2 := bytes.Split(p, seq[byte]{'/'})
+		lemmaSplitAddNonSep(s, add, res1, res2)
+	}
+}
+
+
+
+ghost
+requires 0 < len(flat1)
+requires 0 < len(flat2)
+requires flat1[len(flat1)-1] ++ seq[byte]{add} == flat2[len(flat2)-1]
+requires flat1[:len(flat1)-1] == flat2[:len(flat2)-1]
+ensures toPath(flat1, rooted).dirname() == toPath(flat2, rooted).dirname()
+ensures toPath(flat1, rooted).basename() ++ seq[byte]{add} == toPath(flat2, rooted).basename()
+decreases
+func lemma_toPathAddNormalChar(flat1, flat2 seq[seq[byte]], add byte, rooted bool) {
+}
+
+ghost
+requires a === b
+requires 0 < len(a.parts)
+requires 0 < len(b.parts)
+ensures a.dirname() == b.dirname()
+decreases
+func lemmaDirname(a, b Path) {
+	assert a.dirname() == a.parts[:len(a.parts)-1]
+	assert b.dirname() == b.parts[:len(b.parts)-1]
+	assert a.parts === b.parts
+}
+
+ghost
+requires ch != '/'
+requires 0 < len(p)
+requires p[0] == '/' ==> 1 < len(p)
+ensures 0 < len(ToPath(p).parts)
+ensures 0 < len(ToPath(p ++ seq[byte]{ch}).parts)
+ensures ToPath(p).dirname() == ToPath(p ++ seq[byte]{ch}).dirname()
+ensures ToPath(p).basename() ++ seq[byte]{ch} == ToPath(p ++ seq[byte]{ch}).basename()
+decreases
+func lemmaToPathPoppingNormalChar(p seq[byte], ch byte) {
+
+	with_ch := p ++ seq[byte]{ch}
+	lemmaToPathNonEmpty(p)
+	lemmaToPathNonEmpty(with_ch)
+	sep := seq[byte]{'/'}
+	lemmaSplitAddNonSep(p, ch, bytes.Split(p, sep), bytes.Split(with_ch, sep) )
+
+	if p[0] == '/' {
+		assert ToPath(p) == toPath( bytes.Split(p[1:], sep), true )
+		flat1 := bytes.Split(p[1:], sep)
+		flat2 := bytes.Split(p[1:] ++ seq[byte]{ch}, sep)
+		assert ToPath(p) == toPath( flat1, true )
+		assert ToPath(p) === toPath( flat1, true )
+		assert ToPath(with_ch) === toPath( bytes.Split (with_ch[1:], sep), true )
+		assert with_ch[1:] === p[1:] ++ seq[byte]{ch}
+		assert ToPath(with_ch) === toPath( flat2, true )
+		p1 := toPath( flat1, true )
+		p2 := toPath( flat2, true )
+		// bytes.LemmaSplitNonEmpty(p[1:], sep)
+		// bytes.LemmaSplitNonEmpty(p[1:] ++ seq[byte]{ch}, sep)
+		assert 0 < len(flat1)
+		assert 0 < len(flat2)
+		lemmaSplitAddNonSep(p[1:], ch, flat1, flat2 )
+		lemma_toPathAddNormalChar( flat1, flat2, ch, true )	
+		assert toPath(flat1, true).dirname() == toPath(flat2, true).dirname()
+		assert ToPath(p) == toPath( flat1, true )
+		assert ToPath(with_ch) === toPath( flat2, true )
+		assert toPath(flat1, true).dirname() == ToPath(p).dirname()
+		lemmaDirname(toPath(flat2, true), ToPath(with_ch))
+		assert toPath(flat2, true).dirname() == ToPath(with_ch).dirname()
+		assert ToPath(p).dirname() == ToPath(with_ch).dirname()
+
+		assert ToPath(p).dirname() == ToPath(p ++ seq[byte]{ch}).dirname()
+	} else {
+		assert ToPath(p) == toPath(bytes.Split(p, sep), false )
+		flat := bytes.Split(p, sep)
+		flat2 := bytes.Split(p ++ seq[byte]{ch}, sep)
+		// bytes.LemmaSplitNonEmpty(p, sep)
+		// bytes.LemmaSplitNonEmpty(p ++ seq[byte]{ch}, sep)
+		assert 0 < len(flat)
+		assert 0 < len(flat2)
+		lemmaSplitAddNonSep(p, ch, flat, flat2 )
+		lemma_toPathAddNormalChar(flat, flat2, ch, false)	
+
+		assert ToPath(p).dirname() == ToPath(p ++ seq[byte]{ch}).dirname()
+	}
+
+}
+
+
+
+ghost
+requires p == seq[byte]{'.'}
+ensures !ToPath(p).rooted
+ensures ToPath(p).parts == seq[Segment]{ dot() }
+decreases
+func lemmaToPathDot(p seq[byte]) {
+
+	sep := seq[byte]{'/'}
+
+	assert pathAppend(Path{rooted:false,parts:seq[Segment]{},}, p) == Path{rooted:false,parts:seq[Segment]{p},}
+	assert newPath(false) == Path{rooted:false,parts:seq[Segment]{},}
+	assert toPath(seq[seq[byte]]{}, false) == Path{parts:seq[Segment]{},rooted:false,}
+	assert toPath(seq[seq[byte]]{p}, false) == Path{rooted:false,parts:seq[Segment]{p},}
+	assert isRooted(p) == false
+	assert bytes.SplitInner(seq[byte]{}, sep, p) == seq[seq[byte]]{p}
+	assert p[1:] == seq[byte]{}
+	assert bytes.SplitInner(p, sep, seq[byte]{}) == bytes.SplitInner(seq[byte]{}, sep, p)
+	assert bytes.SplitInner(p, sep, seq[byte]{}) == seq[seq[byte]]{p}
+	assert bytes.Split(p, sep) == seq[seq[byte]]{p}
+	assert isRooted(p) == false
+	assert pathContents(p) == p
+	assert ToPath(p) == Path{parts:seq[Segment]{p},rooted:false,}
+
+}
+
+ghost
+requires 0 < len(s)
+requires res1 == bytes.SplitInner(s, seq[byte]{'/'}, ac)
+requires res2 == bytes.SplitInner(s ++ seq[byte]{'/'}, seq[byte]{'/'}, ac)
+ensures len(res1)+1 == len(res2)
+ensures 0 < len(res1)
+ensures res1 == res2[:len(res2)-1]
+ensures res2[len(res2)-1] == seq[byte]{}
+decreases len(s)
+func lemmaSplitInnerAddSep(s, ac seq[byte], res1, res2 seq[seq[byte]]) {
+	sep := seq[byte]{'/'}
+	s2 := s ++ seq[byte]{'/'}
+
+	switch {
+	case sep == s:
+		assert res1 == seq[seq[byte]]{ac} ++ bytes.SplitInner(s[len(sep):], sep, seq[byte]{})
+		assert s[len(sep):] == seq[byte]{}
+		assert bytes.SplitInner(s[len(sep):], sep, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}}
+		assert res1 == seq[seq[byte]]{ ac, seq[byte]{} }
+		assert res2 == bytes.SplitInner(s2, sep, ac)
+		assert s2[:len(sep)] == sep
+		// assert bytes.SplitInner(s2, sep, ac) == seqÇ
+		assert res2 == seq[seq[byte]]{ ac } ++ bytes.SplitInner(s2[len(sep):], sep, seq[byte]{})
+		assert s2[len(sep):] == sep
+		assert bytes.SplitInner(sep, sep, seq[byte]{}) == seq[seq[byte]]{ seq[byte]{}, seq[byte]{} }
+		assert res2 == seq[seq[byte]]{ ac, seq[byte]{}, seq[byte]{} }
+	case s[:len(sep)] == sep:
+		r1 := bytes.SplitInner(s[len(sep):], sep, seq[byte]{})
+		r2 := bytes.SplitInner(s2[len(sep):], sep, seq[byte]{})
+
+		assert res1 == seq[seq[byte]]{ac} ++ r1
+		assert res2 == seq[seq[byte]]{ac} ++ r2
+
+		assert s2[len(sep):] == s[len(sep):] ++ seq[byte]{'/'}
+		lemmaSplitInnerAddSep(s[1:], seq[byte]{}, r1, r2)
+
+		assert len(res1)+1 == len(res2)
+	case len(s) == 1:
+		ch := s[0]
+		assert s[1:] == seq[byte]{}
+		assert s2[1:] == seq[byte]{'/'}
+		assert res1 == bytes.SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]})
+		assert res1 == seq[seq[byte]]{ ac ++ seq[byte]{s[0]} }
+
+
+		assert res2 == bytes.SplitInner(s2[1:], sep, ac ++ seq[byte]{s[0]})
+		
+
+		assert bytes.SplitInner(seq[byte]{}, sep, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}}
+		assert sep[1:] == seq[byte]{}
+		assert bytes.SplitInner(sep, sep, ac ++ seq[byte]{ch}) == seq[seq[byte]]{ac ++ seq[byte]{ch}, seq[byte]{}}
+		assert seq[byte]{ch, '/'}[1:] == sep
+		assert bytes.SplitInner(seq[byte]{ch, '/'}, sep, ac) == seq[seq[byte]]{ac ++ seq[byte]{ch}, seq[byte]{}}
+
+		assert res2 == seq[seq[byte]]{ ac ++ seq[byte]{s[0]}, seq[byte]{} }
+
+
+	default:
+		r1 := bytes.SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]} )
+		r2 := bytes.SplitInner(s2[1:], sep, ac ++ seq[byte]{s[0]} )
+		assert s2[1:] == s[1:] ++ seq[byte]{'/'}
+
+		assert res1 == r1
+		assert res2 == r2
+
+		lemmaSplitInnerAddSep(s[1:], ac ++ seq[byte]{s[0]}, r1, r2)
+		assert len(res1)+1 == len(res2)
+	}
+}
+
+
+ghost
+ensures toPath(p, rooted).parts == p
+decreases len(p)
+func lemma_toPathSplit(p seq[seq[byte]], rooted bool) {
+}
+
+ghost
+ensures toPath(a, rooted).parts ++ b == toPath(a ++ b, rooted).parts
+decreases
+func lemma_toPathPrefix(a, b seq[Segment], rooted bool) {
+	
+}
+
+
+ghost
+requires 0 < len(p)
+requires prev === ToPath(p)
+ensures ToPath(p ++ seq[byte]{ '/' }).rooted == prev.rooted
+ensures len(ToPath(p).parts) == 0 ==> ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ seq[byte]{}, seq[byte]{} }
+ensures len(ToPath(p).parts) != 0 ==> ToPath(p ++ seq[byte]{ '/' }).parts == prev.parts ++ seq[Segment]{ seq[byte]{} }
+decreases
+func lemmaToPathAppendingSlash(prev Path, p seq[byte]) {
+	sep := seq[byte]{'/'}
+
+	r1 := bytes.SplitInner(p, sep, seq[byte]{})
+	r2 := bytes.SplitInner(p ++ sep, sep, seq[byte]{})
+	lemmaSplitInnerAddSep(p, seq[byte]{}, r1, r2)
+
+
+
+	empty := seq[byte]{}
+
+	switch {
+	case p == seq[byte]{}:
+		assert len(ToPath(p).parts) == 0
+		assert !isRooted(p)
+
+		assert ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ empty, empty }
+		assert ToPath(p ++ seq[byte]{ '/' }).rooted == prev.rooted
+		assert len(ToPath(p).parts) == 0 ==> ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ empty, empty }
+	case p == seq[byte]{'/'}:
+		// assert len(ToPath(p).parts) == 0
+		assert isRooted(p)
+
+		assert ToPath(p ++ seq[byte]{ '/' }).rooted
+
+		assert pathContents(p ++ sep) == sep
+		assert bytes.Split(sep, sep) == bytes.SplitInner(sep, sep, seq[byte]{})
+		assert bytes.SplitInner(sep, sep, seq[byte]{}) == seq[seq[byte]]{ seq[byte]{}, seq[byte]{} }
+
+		flat := seq[seq[byte]]{ empty, empty }
+		assert ToPath(p ++ sep) == toPath( flat, true )
+		assert toPath(flat[:2], true) == newPath(true)
+		assert toPath(flat[:1], true) == pathAppend(newPath(true), empty)
+		assert toPath(flat, true) == pathAppend(pathAppend(newPath(true), empty), empty)
+
+		assert ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ empty, empty }
+		assert prev.rooted
+		assert len(ToPath(p).parts) == 0 ==> ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ empty, empty }
+	case p[0] == '/':
+		assert pathContents(p) == p[1:]
+		assert isRooted(p)
+		lemmaToPathNonEmpty(p)
+
+		assert len(ToPath(p).parts) != 0
+		assert ToPath(p ++ seq[byte]{ '/' }).rooted == prev.rooted
+
+		beforeSplit := bytes.SplitInner( p[1:], sep, seq[byte]{} )
+		afterSplit := bytes.SplitInner( p[1:] ++ sep, sep, seq[byte]{} )
+		assert ToPath(p) == toPath( beforeSplit, true )
+		assert ToPath(p) === toPath( beforeSplit, true )
+
+		assert ToPath(p ++ seq[byte]{'/'}) == toPath( bytes.Split(p[1:] ++ seq[byte]{'/'}, seq[byte]{'/'} ), true)
+		assert afterSplit == bytes.Split(p[1:] ++ seq[byte]{'/'}, seq[byte]{'/'} )
+		assert afterSplit === bytes.Split(p[1:] ++ seq[byte]{'/'}, seq[byte]{'/'} )
+		assert ToPath(p ++ seq[byte]{'/'}) == toPath( afterSplit, true)
+
+
+		r1 := bytes.SplitInner(p[1:], seq[byte]{'/'}, seq[byte]{})
+		r2 := bytes.SplitInner(p[1:] ++ seq[byte]{'/'}, seq[byte]{'/'}, seq[byte]{})
+
+		lemmaSplitInnerAddSep( p[1:], seq[byte]{}, r1, r2 )
+		assert afterSplit == beforeSplit ++ seq[seq[byte]]{ seq[byte]{} }
+		assert toPath(beforeSplit, true).parts == prev.parts
+
+		lemma_toPathPrefix(beforeSplit, seq[Segment]{ seq[byte]{} }, true)
+		assert toPath(beforeSplit, true).parts ++ seq[Segment]{ seq[byte]{} } === toPath(afterSplit, true).parts
+		assert pathContents(p++sep) == p[1:] ++ sep
+		assert ToPath(p ++ sep) === toPath( bytes.Split(p[1:] ++ sep, sep ), true)
+		assert ToPath(p ++ seq[byte]{ '/' }) === toPath(afterSplit, true)
+		assert prev == toPath(beforeSplit, true)
+		assert afterSplit === beforeSplit ++ seq[Segment]{ seq[byte]{} }
+		lemma_toPathSplit(afterSplit, true)
+		assert ToPath(p ++ seq[byte]{'/'}) === toPath(afterSplit, true)
+		assert ToPath(p) === toPath(beforeSplit, true)
+		assert ToPath(p ++ seq[byte]{ '/' }).parts == prev.parts ++ seq[Segment]{ seq[byte]{} }
+	default:
+		assert pathContents(p) == p
+		assert !isRooted(p)
+
+		assert len(ToPath(p).parts) != 0
+		assert ToPath(p ++ seq[byte]{ '/' }).rooted == prev.rooted
+		assert len(ToPath(p).parts) == 0 ==> ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ empty, empty }
+		assert ToPath(p ++ seq[byte]{ '/' }).parts == prev.parts ++ seq[Segment]{ seq[byte]{} }
+	}
+	assert len(ToPath(p).parts) == 0 ==> ToPath(p ++ seq[byte]{ '/' }).parts == seq[Segment]{ empty, empty }
+}
+
+// ghost
+// ensures bytes.SplitInner(s1 ++ seq[byte]{'/'} ++ s2, seq[byte]{'/'}, ac) ==
+// 		bytes.SplitInner(s1, seq[byte]{'/'}, ac) ++ bytes.SplitInner(s2, seq[byte]{'/'}, seq[byte]{})
+// decreases len(s1)
+// func lemmaSplitInnerAppend(s1, s2, ac seq[byte]) {
+// 	sep := seq[byte]{'/'}
+// 	split1 := bytes.SplitInner(s1, seq[byte]{'/'}, ac)
+// 	split2 := bytes.SplitInner(s2, seq[byte]{'/'}, seq[byte]{})
+// 	splitFull := bytes.SplitInner(s1 ++ seq[byte]{'/'} ++ s2, seq[byte]{'/'}, ac)
+// 	switch {
+// 	case len(s1) == 0 && len(ac) == 0:
+// 		assert split1 == seq[seq[byte]]{}
+// 	case len(s1) == 0:
+// 	case sep == s1:
+// 	case s1[:len(sep)] == sep:
+// 	default:
+// 	}
+// }
+
+ghost
+ensures bytes.SplitInner(seq[byte]{'.', '.'}, seq[byte]{'/'}, seq[byte]{}) == seq[seq[byte]]{ seq[byte]{'.', '.'} }
+decreases
+func lemmaSplitInnerDotdot() {
+
+	res := seq[seq[byte]]{ seq[byte]{'.','.'} }
+	sep := seq[byte]{'/'}
+	
+	assert bytes.SplitInner(seq[byte]{}, sep, seq[byte]{'.', '.'}) == res
+	assert seq[byte]{'.'}[1:] == seq[byte]{}
+	assert seq[byte]{'.'}[:1] == seq[byte]{'.'}
+	assert bytes.SplitInner(seq[byte]{'.'}, sep, seq[byte]{'.'}) == res
+	assert seq[byte]{'.', '.'}[1:] == seq[byte]{'.'}
+	assert seq[byte]{'.', '.'}[:1] == seq[byte]{'.'}
+	assert bytes.SplitInner(seq[byte]{'.', '.'}, sep, seq[byte]{}) == res
+}
+
+ghost
+requires a == b
+ensures c ++ a == c ++ b
+decreases
+func lemmaConcatEqualLeft(a, b, c seq[seq[byte]]) { }
+
+ghost
+requires isCompleted(s)
+requires all == bytes.SplitInner(s ++ seq[byte]{'.','.'}, seq[byte]{'/'}, ac)
+requires prefix == bytes.SplitInner(s, seq[byte]{'/'}, ac)
+requires len(s) == 0 ==> len(ac) == 0
+ensures all == prefix[:len(prefix)-1] ++ seq[seq[byte]]{ seq[byte]{'.','.'} }
+decreases len(s)
+func lemmaSplitInnerAppendDotdot(s, ac seq[byte], all, prefix seq[seq[byte]]) {
+	full := s ++ seq[byte]{'.', '.'}
+	tail := seq[seq[byte]]{ seq[byte]{'.','.'} }
+	sep := seq[byte]{'/'}
+
+	switch {
+	case len(s) == 0:
+		// assert prefix == seq[seq[byte]]{}
+
+		lemmaSplitInnerDotdot()
+
+		assert all == prefix[:len(prefix)-1] ++ tail
+	case sep == s:
+
+		assert bytes.SplitInner(seq[byte]{}, sep, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}}
+		assert sep[1:] == seq[byte]{}
+		assert bytes.SplitInner(sep, sep, ac) == seq[seq[byte]]{ac, seq[byte]{}}
+		assert prefix == seq[seq[byte]]{ ac, seq[byte]{} }
+		assert all == seq[seq[byte]]{ ac } ++ bytes.SplitInner(full[len(sep):], sep, seq[byte]{})
+		assert full[len(sep):] == seq[byte]{'.','.'}
+		lemmaSplitInnerDotdot()
+
+		assert all == prefix[:len(prefix)-1] ++ tail
+	case s[:len(sep)] == sep:
+		prefixp := bytes.SplitInner(s[len(sep):], sep, seq[byte]{})
+		// bytes.LemmaSplitNonEmpty(s[1:], sep)
+		assert len(prefixp) != 0
+
+		allp := bytes.SplitInner(full[len(sep):], sep, seq[byte]{})
+		
+		assert prefix == seq[seq[byte]]{ac} ++ prefixp
+		assert all == seq[seq[byte]]{ac} ++ allp
+
+		first := seq[seq[byte]]{ac}
+
+		assert full[1:] == s[1:] ++ seq[byte]{'.', '.'}
+		lemmaSplitInnerAppendDotdot(s[1:], seq[byte]{}, allp, prefixp)
+		lemmaConcatEqualLeft(allp, prefixp[:len(prefixp)-1] ++ tail, first)
+		assert first ++ allp == first ++ (prefixp[:len(prefixp)-1] ++ tail)
+		assert first ++ allp == first ++ prefixp[:len(prefixp)-1] ++ tail
+		assert prefix[:len(prefix)-1] == first ++ prefixp[:len(prefixp)-1]
+		assert all == prefix[:len(prefix)-1] ++ tail
+	default:
+		acp := ac ++ seq[byte]{s[0]}
+		prefixp := bytes.SplitInner(s[1:], sep, acp)
+		allp := bytes.SplitInner(full[1:], sep, acp)
+		assert full[1:] == s[1:] ++ seq[byte]{'.', '.'}
+
+		lemmaSplitInnerAppendDotdot(s[1:], acp, allp, prefixp)
+		
+		assert all == prefix[:len(prefix)-1] ++ tail
+	}
+
+	assert all == prefix[:len(prefix)-1] ++ tail
+	
+}
+
+ghost
+requires isCompleted(p)
+requires prev === ToPath(p)
+ensures ToPath(p ++ seq[byte]{ '.', '.' }).rooted == prev.rooted
+ensures ToPath(p ++ seq[byte]{ '.', '.' }).parts == prev.parts[:len(prev.parts)-1] ++ seq[Segment]{ dotdot() }
+decreases
+func lemmaToPathAppendingDotdot(prev Path, p seq[byte]) {
+	dotdot := seq[byte]{'.','.'}
+	res := ToPath(p ++ dotdot)
+	sep := seq[byte]{'/'}
+	tail := seq[seq[byte]]{ dotdot }
+	if len(p) == 0 || p[0] != '/' {
+		assert pathContents(p) == p
+		assert !isRooted(p)
+		rooted := false
+
+		split1 := bytes.SplitInner(p, sep, seq[byte]{})
+		split2 := bytes.SplitInner(p ++ seq[byte]{'.', '.'}, sep, seq[byte]{})
+		lemmaSplitInnerAppendDotdot(p, seq[byte]{}, split2, split1)
+
+
+		assert res == toPath(bytes.Split(p, sep), rooted)
+		assert split1[:len(split1)-1] ++ tail == split2
+
+		assert prev == toPath(split1, rooted)
+		assert res  == toPath(split2, rooted)
+		
+		lemma_toPathSplit(split1, rooted)
+		assert prev.parts == split1
+		assert res.parts == split2
+
+
+	} else {
+		assert pathContents(p) == p[1:]
+		assert pathContents(p++dotdot) == p[1:]++dotdot
+		assert isRooted(p)
+		rooted := true
+
+
+
+		split1 := bytes.SplitInner(p[1:], sep, seq[byte]{})
+		split2 := bytes.SplitInner(p[1:] ++ seq[byte]{'.', '.'}, sep, seq[byte]{})
+		lemmaSplitInnerAppendDotdot(p[1:], seq[byte]{}, split2, split1)
+
+		assert res == toPath(bytes.Split(p, sep), rooted)
+		assert split1[:len(split1)-1] ++ tail == split2
+
+		assert prev === toPath(split1, rooted)
+		assert res  === toPath(split2, rooted)
+		
+		lemma_toPathSplit(split1, rooted)
+		assert prev.parts == split1
+		assert res.parts == split2
+	}
+
+}

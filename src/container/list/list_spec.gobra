@@ -10,6 +10,7 @@ requires list.Mem(elems, true)
 requires e in elems
 ensures  res == (unfolding list.Mem(elems, true) in e.next)
 ensures  unfolding list.Mem(elems, true) in res in elems
+decreases
 pure
 func (e *Element) nextPure(ghost elems set[*Element], ghost list *List) (res *Element) {
 	return unfolding list.Mem(elems, true) in e.next
@@ -20,6 +21,7 @@ requires list.Mem(elems, true)
 requires e in elems
 ensures  res == (unfolding list.Mem(elems, true) in e.prev)
 ensures  unfolding list.Mem(elems, true) in res in elems
+decreases
 pure
 func (e *Element) prevPure(ghost elems set[*Element], ghost list *List) (res *Element) {
 	return unfolding list.Mem(elems, true) in e.prev
@@ -29,6 +31,7 @@ ghost
 requires l.Mem(elems, true)
 requires e1 in elems && e2 in elems
 ensures  unfolding l.Mem(elems, true) in (e1.next == e2 && e2.prev == e1) == res
+decreases
 pure
 func (e1 *Element) comesBefore(e2 *Element, ghost elems set[*Element], ghost l *List) (res bool) {
 	return unfolding l.Mem(elems, true) in (e1.next == e2 && e2.prev == e1)

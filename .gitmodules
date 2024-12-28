@@ -1,0 +1,3 @@
+[submodule "src/gobra-libs"]
+	path = src/gobra-libs
+	url = https://github.com/viperproject/gobra-libs
