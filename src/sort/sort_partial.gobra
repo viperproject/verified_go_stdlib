@@ -1,0 +1,294 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+//go:generate go run gen_sort_variants.go
+
+// Package sort provides primitives for sorting slices and user-defined collections.
+// +gobra
+package sort
+
+//# import "math/bits" //# Had to comment this out for verification to work.
+
+ghost const ReadPerm perm = 1/2
+
+// An implementation of Interface can be sorted by the routines in this package.
+// The methods refer to elements of the underlying collection by integer index.
+type Interface interface {
+	pred Mem(ghost s seq[any])
+
+	// Len is the number of elements in the collection.
+	preserves acc(Mem(elems), ReadPerm)
+	ensures  res == len(elems)
+	decreases
+	Len(ghost elems seq[any]) (res int)
+
+	// Less reports whether the element with index i
+	// must sort before the element with index j.
+	//
+	// If both Less(i, j) and Less(j, i) are false,
+	// then the elements at index i and j are considered equal.
+	// Sort may place equal elements in any order in the final result,
+	// while Stable preserves the original input order of equal elements.
+	//
+	// Less must describe a transitive ordering:
+	//  - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
+	//  - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+	ghost
+	preserves acc(Mem(elems), ReadPerm)
+	ensures   forall a, b, c int :: {less_spec(a, b, elems), less_spec(b, c, elems)} (0 <= a && a < len(elems) && 0 <= b && b < len(elems) && 0 <= c && c < len(elems) && less_spec(a, b, elems) && less_spec(b, c, elems)) ==> less_spec(a, c, elems)
+	ensures   forall a, b, c int :: {less_spec(a, b, elems), less_spec(b, c, elems)} (0 <= a && a < len(elems) && 0 <= b && b < len(elems) && 0 <= c && c < len(elems) && !less_spec(a, b, elems) && !less_spec(b, c, elems)) ==> !less_spec(a, c, elems)
+	decreases
+	LemmaLessIsTransitive(ghost elems seq[any])
+
+	requires acc(Mem(elems), ReadPerm)
+	requires 0 <= i && i < len(elems)
+	requires 0 <= j && j < len(elems)
+	ensures  i == j ==> !res
+	decreases
+	pure less_spec(i, j int, ghost elems seq[any]) (res bool)
+	//
+	// Note that floating-point comparison (the < operator on float32 or float64 values)
+	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	// See Float64Slice.Less for a correct implementation for floating-point values.
+	preserves acc(Mem(elems), ReadPerm)
+	requires  0 <= i && i < len(elems)
+	requires  0 <= j && j < len(elems)
+	ensures   res == less_spec(i, j, elems)
+	decreases
+	Less(i, j int, ghost elems seq[any]) (res bool)
+
+	// Swap swaps the elements with indexes i and j.
+	requires Mem(elems)
+	requires 0 <= i && i < len(elems)
+	requires 0 <= j && j < len(elems)
+	ensures  Mem(swapped_elems)
+	ensures  haveSameElements(elems, swapped_elems)
+	ensures  0 <= i && i < len(elems)
+	ensures  0 <= j && j < len(elems)
+	ensures  elems[i] === swapped_elems[j]
+	ensures  elems[j] === swapped_elems[i]
+	ensures  forall x int :: {elems[x]} {swapped_elems[x]} (0 <= x && x < len(elems) && x != i && x != j) ==> (elems[x] === swapped_elems[x])
+	ensures  old(less_spec(i, j, elems)) ==> !less_spec(i, j, swapped_elems) //# We make the effect of the Swap operation on the Less relation explicit.
+	ensures  old(less_spec(j, i, elems)) ==> !less_spec(j, i, swapped_elems)
+	decreases
+	Swap(i, j int, ghost elems seq[any]) (ghost swapped_elems seq[any])
+}
+
+
+//# PLACEHOLDER: Here would be more code from the original sort.go file.
+//# isPartiallySorted is intended to be used in specifications.
+//# It reports whether the elemented from indicies 'start' to 'end' (inclusive) are sorted in non-decreasing order according to 'less_spec'
+ghost
+requires data != nil
+requires data.Mem(elems)
+requires 0 <= start && start < len(elems)
+requires start <= end && end < len(elems)
+ensures  end == start ==> sorted
+ensures  (end > start && !data.less_spec(end, end - 1, elems)) ==> sorted == isPartiallySorted(data, start, end - 1, elems)
+ensures  (end > start &&  data.less_spec(end, end - 1, elems)) ==> !sorted
+decreases end - start
+pure
+func isPartiallySorted(data Interface, start, end int, ghost elems seq[any]) (sorted bool) {
+	return (end == start) ? true : (!data.less_spec(end, end - 1, elems) ? isPartiallySorted(data, start, end - 1, elems) : false)
+}
+
+// IsSorted reports whether data is sorted.
+preserves data.Mem(elems)
+requires  data != nil
+ensures   res ==> forall idx int :: {data.less_spec(idx, idx - 1, elems)} ((0 < idx && idx < len(elems)) ==> (!data.less_spec(idx, idx - 1, elems)))
+ensures   !res ==> !(forall idx int :: {data.less_spec(idx, idx - 1, elems)} ((0 < idx && idx < len(elems)) ==> (!data.less_spec(idx, idx - 1, elems))))
+decreases
+func IsSorted(data Interface, ghost elems seq[any]) (res bool) {
+	n := data.Len(elems)
+
+	res = true //# moved this up for use in the invariant
+
+	invariant res
+	invariant i < n
+	invariant len(elems) > 0 ==> 0 <= i //# if n==0 then i==-1 after initialization
+	invariant data.Mem(elems)
+	invariant len(elems) > 0 ==> (forall idx int :: {data.less_spec(idx, idx - 1, elems)} ((i < idx && idx < len(elems)) ==> !data.less_spec(idx, idx - 1, elems)))
+	decreases i
+	for i := n - 1; i > 0; i-- {
+		if data.Less(i, i - 1, elems) {
+			return false
+		}
+		assert !data.less_spec(i, i - 1, elems)
+	}
+	assert res
+	return
+}
+
+// Convenience types for common cases
+
+// IntSlice attaches the methods of Interface to []int, sorting in increasing order.
+type IntSlice []int
+
+//# Adapted from Gobra tutorial
+ghost
+requires forall j int :: {&s[j]} 0 <= j && j < len(s) ==> acc(&s[j], _)
+ensures len(res) == len(s)
+ensures forall j int :: {&s[j]} {res[j]} 0 <= j && j < len(s) ==> s[j] == res[j]
+decreases len(s)
+pure func toSeq(s []int) (res seq[any]) {
+  return (len(s) == 0 ? seq[any]{} :
+      toSeq(s[:len(s) - 1]) ++ seq[any]{s[len(s) - 1]})
+}
+
+pred (x IntSlice) Mem(ghost s seq[any]){
+	len(x) == len(s) && //# If this is not the first line in the predicate, then we cannot verify e.g. the last postcondition in Len()
+	forall j int :: {&x[j]} 0 <= j && j < len(x) ==> acc(&x[j]) &&
+	s == toSeq(x)
+}
+
+preserves acc(x.Mem(elems), ReadPerm)
+ensures   unfolding acc(x.Mem(elems), ReadPerm) in res == len(elems)
+decreases
+func (x IntSlice) Len(ghost elems seq[any]) (res int) {
+	return len(x)
+}
+
+ghost
+preserves acc(x.Mem(elems), ReadPerm)
+ensures   forall a, b, c int :: {x.less_spec(a, b, elems), x.less_spec(b, c, elems)} (0 <= a && a < len(elems) && 0 <= b && b < len(elems) && 0 <= c && c < len(elems) && x.less_spec(a, b, elems) && x.less_spec(b, c, elems)) ==> x.less_spec(a, c, elems)
+ensures   forall a, b, c int :: {x.less_spec(a, b, elems), x.less_spec(b, c, elems)} (0 <= a && a < len(elems) && 0 <= b && b < len(elems) && 0 <= c && c < len(elems) && !x.less_spec(a, b, elems) && !x.less_spec(b, c, elems)) ==> !x.less_spec(a, c, elems)
+decreases
+func (x IntSlice) LemmaLessIsTransitive(ghost elems seq[any]){
+	unfold acc(x.Mem(elems), ReadPerm)
+	fold acc(x.Mem(elems), ReadPerm)
+}
+
+requires acc(x.Mem(elems), ReadPerm)
+requires 0 <= i && i < len(elems)
+requires 0 <= j && j < len(elems)
+ensures  i == j ==> !res
+decreases
+pure func (x IntSlice) less_spec(i, j int, ghost elems seq[any]) (res bool){
+	return unfolding acc(x.Mem(elems), ReadPerm) in x[i] < x[j]
+}
+
+preserves acc(x.Mem(elems), ReadPerm)
+requires  0 <= i && i < len(elems)
+requires  0 <= j && j < len(elems)
+ensures   res == x.less_spec(i, j, elems)
+decreases
+func (x IntSlice) Less(i, j int, ghost elems seq[any]) (res bool) {
+	return unfolding acc(x.Mem(elems), ReadPerm) in x[i] < x[j]
+}
+
+
+requires x.Mem(elems)
+requires 0 <= i && i < len(elems)
+requires 0 <= j && j < len(elems)
+ensures  x.Mem(swapped_elems)
+ensures  haveSameElements(elems, swapped_elems)
+ensures  0 <= i && i < len(elems)
+ensures  0 <= j && j < len(elems)
+ensures  elems[i] === swapped_elems[j]
+ensures  elems[j] === swapped_elems[i]
+ensures  forall idx int :: {elems[idx]} {swapped_elems[idx]} (0 <= idx && idx < len(elems) && idx != i && idx != j) ==> (elems[idx] === swapped_elems[idx])
+ensures  old(x.less_spec(i, j, elems)) ==> !x.less_spec(i, j, swapped_elems)
+ensures  old(x.less_spec(j, i, elems)) ==> !x.less_spec(j, i, swapped_elems)
+decreases
+func (x IntSlice) Swap(i, j int, ghost elems seq[any]) (ghost swapped_elems seq[any]) {
+	unfold x.Mem(elems)
+	x[i], x[j] = x[j], x[i]
+	swapped_elems = toSeq(x)
+	fold x.Mem(swapped_elems)
+	assume forall idx int :: (0 <= idx && idx < len(elems)) ==> elems[idx] == old(unfolding x.Mem(elems) in  x[idx]) //# Cannot be asserted in GobraCLI but works in GobraIDE as of Jan 23rd 2023
+	assert forall idx int :: (0 <= idx && idx < len(swapped_elems)) ==> swapped_elems[idx] == unfolding x.Mem(swapped_elems) in  x[idx]
+	assume haveSameElements(elems, swapped_elems) //# We believe this to be true.
+}
+
+//# implementation proof
+(IntSlice) implements Interface{ }
+
+
+
+// ######### BEGIN FROM zsortinterface.go ##############
+// insertionSort sorts data[a:b] using insertion sort.
+requires data.Mem(elems)
+requires data != nil
+requires 0 <= a && a < len(elems)
+requires a <= b && b <= len(elems) //# the element at position b does not get sorted
+ensures  data.Mem(sorted_elems)
+ensures  haveSameElements(elems, sorted_elems)
+decreases
+func insertionSort(data Interface, a, b int, ghost elems seq[any]) (ghost sorted_elems seq[any]) {
+	sorted_elems = elems
+	assert data.Mem(sorted_elems)
+
+	invariant haveSameElements(elems, sorted_elems)
+	invariant a < i
+	invariant a < b ==> i <= b
+	invariant data.Mem(sorted_elems)
+	//# invariant prefix [a:i] is always sorted
+	decreases b-i
+	for i := a + 1; i < b; i++ {
+		invariant haveSameElements(elems, sorted_elems)
+		invariant i < b
+		invariant a <= j && j <= i
+		invariant a < j ==> 0 <= j - 1
+		invariant data.Mem(sorted_elems)
+		//# invariant prefix [a:j-1] is always sorted and [j:i] is always sorted
+		decreases j-a
+		for j := i; j > a /*&& data.Less(j, j - 1, elems)*/; j-- { //# The second conjunct in the loop condition was commented out. See comment below.
+			assert 0 <= j - 1
+			assert i < b
+			assert i < len(sorted_elems)
+			if data.Less(j, j - 1, sorted_elems) { //# The second conjunct in the loop condition was commented out and introduced here as an IF block. This is due to a bug in Gobra where short circuiting is not detected. See https://github.com/viperproject/gobra/issues/511
+				sorted_elems = data.Swap(j, j - 1, sorted_elems)
+				assert !data.less_spec(j, j - 1, sorted_elems)
+			} else {
+				assert !data.less_spec(j, j - 1, sorted_elems)
+				break
+			}
+		}
+	}
+}
+// ######### END FROM zsortinterface.go ##############
+
+
+//# helper:
+
+ghost
+ensures forall e any :: e in elemsSeq ==> e in elemsMultiSet //# find triggers
+ensures len(elemsSeq) == len(elemsMultiSet)
+pure func toMultiSet(ghost elemsSeq seq[any]) (ghost elemsMultiSet mset[any]){
+	return (len(elemsSeq) == 0 ? mset[any]{} : 
+		mset[any]{elemsSeq[len(elemsSeq) - 1]} union toMultiSet(elemsSeq[:len(elemsSeq) - 1]))
+}
+
+
+
+
+ghost
+ensures toMultiSet(seq1) === toMultiSet(seq2) ==> res
+ensures toMultiSet(seq1) !== toMultiSet(seq2) ==> !res
+ensures res ==> len(seq1) == len(seq2)
+pure func haveSameElements(ghost seq1 seq[any], ghost seq2 seq[any]) (res bool){
+	return toMultiSet(seq1) === toMultiSet(seq2)
+}
+
+
+
+/*
+ensures forall e int :: e in s1 ==> e in s2 //# this causes gobra to crash, it works with mset[int] as the return type
+pure func test(ghost s1 mset[int]) (ghost s2 mset[any])
+*/
+
+
+/*
+ghost
+requires forall j int :: 0 <= j && j < len(s) ==> acc(&s[j], _)
+ensures len(res) == len(s)
+ensures forall j int :: 0 <= j && j < len(s) ==> s[j] in res
+pure func toMultiSet(s []int) (res mset[any]) {
+  return (len(s) == 0 ? mset[any]{} :
+      toSeqX(s[:len(s) - 1]) union mset[any]{s[len(s) - 1]})
+}
+*/
+
+
+
