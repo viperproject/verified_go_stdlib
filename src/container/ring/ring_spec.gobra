@@ -1,0 +1,74 @@
+// +gobra
+package ring
+
+//# This constant serves as the permission amount used for partial read permissions throughout this package
+ghost const ReadPerm perm = 1/2
+
+
+//# This predicate abstracts over the permissions and consistency guarantees of a ring structure pointed to via the element r and its contained elements.
+//# Holding this predicate gives permissions to the underlying ring structure and the fields of all its elements.
+//# If a ring went through its 'init' method it is considered initialized (isInit==true) and fulfills some consistency guarantees.
+//# The predicate distinguishes between initialized and uninitialized rings.
+//# E.g. if a ring is initialized then none of the elements' relevant fields are nil, the ring is doubly-linked etc.
+//# Propely implemented methods receiving a consistent ring should preserve the consistency.
+//# param s			s is the set of elements contained in the ring structure. For an uninitialized or empty ring it only contains r itself.
+//# param isInit	isInit specifies whether the ring can be considered initialized and fulfilling its consistency guarantees.
+//# An important limitation of this predicate is that it does NOT strictly enforce that all the elements form one single ring structure.
+pred (r *Ring) Mem(ghost s set[*Ring], ghost isInit bool) {
+	r != nil &&
+	r in s &&
+	(forall i *Ring :: {i in s} i in s ==> (acc(&i.next) && acc(&i.prev) && acc(&i.Value))) &&
+	((r.next == nil || r.prev == nil) ==> !isInit) &&
+	(!isInit ==> (s == set[*Ring]{r} && r.next == nil && r.prev == nil && len(s) == 1)) &&
+	(isInit ==> (
+		(forall i *Ring :: {i in s} i in s ==> (i.next != nil && i.prev != nil)) &&
+		(forall i, j *Ring :: ((i in s && i.next == j) ==> (j in s && j.prev == i && i.next.prev == i && j.prev.next == j))) &&
+		(forall i, j *Ring :: ((i in s && i.prev == j) ==> (j in s && j.next == i && i.prev.next == i && j.next.prev == j)))))
+}
+
+
+ghost
+requires owner.Mem(elems, true)
+requires r in elems
+ensures  unfolding owner.Mem(elems, true) in res == r.next
+ensures  res in elems
+decreases
+pure
+func (r *Ring) NextPure(ghost elems set[*Ring], ghost owner *Ring) (res *Ring) { 
+	return unfolding owner.Mem(elems, true) in r.next
+}
+
+ghost
+requires owner.Mem(elems,true)
+requires r in elems
+requires n >= 0
+ensures  n == 0 ==> res == r 
+ensures  n > 0 ==> res == r.NextPure(elems, owner).moveNext(n - 1, owner, elems)
+ensures  res in elems
+decreases n
+pure func (r *Ring) moveNext(n int, ghost owner *Ring, ghost elems set[*Ring]) (res * Ring){
+	return (n == 0) ? r : r.NextPure(elems, owner).moveNext(n - 1, owner, elems)
+}
+
+ghost
+requires owner.Mem(elems, true)
+requires r in elems
+ensures  unfolding owner.Mem(elems, true) in res == r.prev
+ensures  res in elems
+decreases
+pure
+func (r *Ring) PrevPure(ghost elems set[*Ring], ghost owner *Ring) (res *Ring) { 
+	return unfolding owner.Mem(elems, true) in r.prev
+}
+
+ghost
+requires owner.Mem(elems,true)
+requires r in elems
+requires n <= 0
+ensures  n == 0 ==> res == r 
+ensures  n < 0 ==> res == r.PrevPure(elems, owner).movePrev(n + 1, owner, elems)
+ensures  res in elems
+decreases 0 - n
+pure func (r *Ring) movePrev(n int, ghost owner *Ring, ghost elems set[*Ring]) (res * Ring){
+	return (n == 0) ? r : r.PrevPure(elems, owner).movePrev(n + 1, owner, elems)
+}
