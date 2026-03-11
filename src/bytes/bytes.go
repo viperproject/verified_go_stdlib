@@ -2374,6 +2374,8 @@ hasUnicode:
 
 // Index returns the index of the first instance of sep in s, or -1 if sep is not present in s.
 //
+// @ trusted
+//
 // @ preserves acc(sl.Bytes(s, 0, len(s)), R40)
 //
 // @ preserves acc(sl.Bytes(sep, 0, len(sep)), R40)
