@@ -222,7 +222,7 @@ func Alignof(x ArbitraryType) uintptr
 // A constant len argument must be representable by a value of type int;
 // if it is an untyped constant it is given type int.
 // The rules for valid uses of Pointer still apply.
-func Add(ptr Pointer, len IntegerType) Pointer
+func Add(ptr Pointer, lenI IntegerType) Pointer
 
 // The function Slice returns a slice whose underlying array starts at ptr
 // and whose length and capacity are len.
@@ -238,4 +238,4 @@ func Add(ptr Pointer, len IntegerType) Pointer
 // if it is an untyped constant it is given type int.
 // At run time, if len is negative, or if ptr is nil and len is not zero,
 // a run-time panic occurs.
-func Slice(ptr *ArbitraryType, len IntegerType) []ArbitraryType
+func Slice(ptr *ArbitraryType, lenI IntegerType) []ArbitraryType

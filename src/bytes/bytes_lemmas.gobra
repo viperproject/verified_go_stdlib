@@ -85,8 +85,8 @@ pure func SpecCountIntermediate(s, sep seq[byte], i int) (res int) {
 ghost
 requires len(sep) > 0
 requires 0 <= i
-ensures forall j int :: {j in res} j in res ==> InRangeInc(j, i, len(s)-len(sep)) && s[j:j+len(sep)] == sep
-ensures forall j, k int :: {j in res, k in res} j in res && k in res && j < k ==> j + len(sep) <= k
+ensures forall j int :: {j elem res} j elem res ==> InRangeInc(j, i, len(s)-len(sep)) && s[j:j+len(sep)] == sep
+ensures forall j, k int :: {j elem res, k elem res} j elem res && k elem res && j < k ==> j + len(sep) <= k
 decreases len(s) - i
 pure func SpecCountIndices(s, sep seq[byte], i int) (res set[int]) {
 	return i >= len(s) ?
@@ -97,9 +97,9 @@ pure func SpecCountIndices(s, sep seq[byte], i int) (res set[int]) {
 }
 
 ghost
-requires forall j int :: {j in indices} j in indices ==> 0 <= j && j < len(b)
-requires forall j int :: {j in indices} j in indices ==> ( b[j] == c)
-requires forall j int :: {j in indices} !(j in indices) ==> ( j < 0 || len(b) <= j || b[j] != c)
+requires forall j int :: {j elem indices} j elem indices ==> 0 <= j && j < len(b)
+requires forall j int :: {j elem indices} j elem indices ==> ( b[j] == c)
+requires forall j int :: {j elem indices} !(j elem indices) ==> ( j < 0 || len(b) <= j || b[j] != c)
 ensures indices == SpecCountIndices(b, seq[byte]{c}, 0)
 decreases
 trusted
@@ -111,7 +111,7 @@ ghost
 requires len(sep) > 0
 requires InRangeInc(idx, 0, len(s))
 requires 0 <= i
-requires idx in SpecCountIndices(s, sep, i)
+requires idx elem SpecCountIndices(s, sep, i)
 ensures SpecCountIndices(s, sep, i) == SpecCountIndices(s[:idx], sep, i) union SpecCountIndices(s, sep, idx)
 decreases idx - i
 func lemmaSpecCountIndicesSplit(s, sep seq[byte], idx, i int) {
@@ -148,7 +148,7 @@ requires InRangeInc(n, 0, len(s))
 requires InRangeInc(idx, 0, n)
 requires InRangeInc(i, 0, len(s))
 requires forall j int :: {s[j:j+len(sep)]} idx <= j && j + len(sep) <= n ==> s[j:j+len(sep)] != sep
-requires idx == 0 || idx-len(sep) in indices
+requires idx == 0 || idx-len(sep) elem indices
 requires SpecCountIndices(s[:idx], sep, 0) == indices
 requires !(idx - len(sep) < i && i < idx)
 ensures SpecCountIndices(s[:idx], sep, i) == SpecCountIndices(s[:n], sep, i)
@@ -194,7 +194,7 @@ requires InRangeInc(i, 0, len(s))
 requires InRangeInc(k, 0, len(s[idx:])-len(sep))
 requires forall j int :: {s[idx:][j:j+len(sep)]} 0 <= j && j < k ==> s[idx:][j:j+len(sep)] != sep
 requires s[idx+k:idx+k+len(sep)] == sep
-requires idx == 0 || idx-len(sep) in indices
+requires idx == 0 || idx-len(sep) elem indices
 requires SpecCountIndices(s[:idx], sep, 0) == indices
 ensures SpecCountIndices(s[:idx+k+len(sep)], sep, i) == SpecCountIndices(s[:idx], sep, i) union set[int]{idx+k}
 decreases
@@ -202,7 +202,7 @@ func lemmaCountSepFound(s, sep seq[byte], indices set[int], idx, k, i int) {
 
 	if idx - len(sep) < i && i < idx {
 		// TODO: i cannot be in this range, because SpecCountIndices would skip it
-		assume !(idx-len(sep) in indices)
+		assume !(idx-len(sep) elem indices)
 
 		assert false // contradiction
 	}
@@ -430,36 +430,36 @@ func lemmaSepNotEquals(s, sep seq[byte], a, b int) {
 
 
 ghost
-requires InRangeInc(low, 0, len(s))
-requires InRangeInc(high, low, len(s))
-preserves acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50)
+requires InRangeInc(lowI, 0, len(s))
+requires InRangeInc(high, lowI, len(s))
+preserves acc(sl.Bytes(s[lowI:high], 0, len(s[lowI:high])), R50)
 preserves acc(sl.Bytes(s, 0, len(s)), R50)
-ensures sl.View(s[low:high]) == sl.View(s)[low:high]
-ensures sl.View(s)[low:high] == sl.View(s[low:high])
+ensures sl.View(s[lowI:high]) == sl.View(s)[lowI:high]
+ensures sl.View(s)[lowI:high] == sl.View(s[lowI:high])
 decreases
-func lemmaViewSubslice(s []byte, low, high int) {
-	a := sl.View(s)[low:high]
-	b := sl.View(s[low:high])
-	l := len(sl.View(s)[low:high])
-	assert len(sl.View(s[low:high])) == l
+func lemmaViewSubslice(s []byte, lowI, high int) {
+	a := sl.View(s)[lowI:high]
+	b := sl.View(s[lowI:high])
+	l := len(sl.View(s)[lowI:high])
+	assert len(sl.View(s[lowI:high])) == l
 
 	invariant InRangeInc(k, 0, l)
-	invariant acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50)
+	invariant acc(sl.Bytes(s[lowI:high], 0, len(s[lowI:high])), R50)
 	invariant acc(sl.Bytes(s, 0, len(s)), R50)
-	invariant a == sl.View(s)[low:high]
-	invariant b == sl.View(s[low:high])
+	invariant a == sl.View(s)[lowI:high]
+	invariant b == sl.View(s[lowI:high])
 	invariant forall i int :: {a[i]}{b[i]} 0 <= i && i < k ==> a[i] == b[i]
 	decreases l-k
 	for k := 0; k < l; k++ {
-		assert a[k] == sl.Byte(s, 0, len(s), k+low)
-		assert b[k] == sl.Byte(s[low:high], 0, len(s[low:high]), k)
+		assert a[k] == sl.Byte(s, 0, len(s), k+lowI)
+		assert b[k] == sl.Byte(s[lowI:high], 0, len(s[lowI:high]), k)
 
-		unfold acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50/2)
+		unfold acc(sl.Bytes(s[lowI:high], 0, len(s[lowI:high])), R50/2)
 		unfold acc(sl.Bytes(s, 0, len(s)), R50/2)
 
-		SubSliceOverlaps(s, low, high)
+		SubSliceOverlaps(s, lowI, high)
 
-		fold acc(sl.Bytes(s[low:high], 0, len(s[low:high])), R50/2)
+		fold acc(sl.Bytes(s[lowI:high], 0, len(s[lowI:high])), R50/2)
 		fold acc(sl.Bytes(s, 0, len(s)), R50/2)
 
 		assert a[k] == b[k]

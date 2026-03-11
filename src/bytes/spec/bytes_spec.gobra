@@ -8,12 +8,12 @@ import (
 )
 
 ghost
-requires low <= high
-ensures res == exists i int :: {i in s} i in s && low <= i && i < high
+requires lowI <= high
+ensures res == exists i int :: {i elem s} i elem s && lowI <= i && i < high
 opaque
-decreases high - low
-pure func SetContainsInRange(s set[int], low, high int) (res bool) {
-	return low < high && (low in s || ( low < high && SetContainsInRange(s, low + 1, high) ))
+decreases high - lowI
+pure func SetContainsInRange(s set[int], lowI, high int) (res bool) {
+	return lowI < high && (lowI elem s || ( lowI < high && SetContainsInRange(s, lowI + 1, high) ))
 }
 
 // Returns true iff a == a[:i] ++ b ++ as for some as.

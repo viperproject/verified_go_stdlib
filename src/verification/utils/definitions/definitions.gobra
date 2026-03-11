@@ -93,24 +93,24 @@ decreases _
 func TODO()
 
 ghost
-ensures res == (low <= i && i < high)
+ensures res == (lowI <= i && i < high)
 decreases
-pure func InRange(i, low, high int) (res bool) {
-	return low <= i && i < high
+pure func InRange(i, lowI, high int) (res bool) {
+	return lowI <= i && i < high
 }
 
 ghost
-ensures res == (low <= i && i <= high)
+ensures res == (lowI <= i && i <= high)
 decreases
-pure func InRangeInc(i, low, high int) (res bool) {
-	return low <= i && i <= high
+pure func InRangeInc(i, lowI, high int) (res bool) {
+	return lowI <= i && i <= high
 }
 
 ghost
-requires 0 <= low && low <= high && high <= len(s)
-ensures forall i int :: {&s[low:high][i]} 0 <= i && i < len(s[low:high]) ==> &s[low:high][i] == &s[i+low]
+requires 0 <= lowI && lowI <= high && high <= len(s)
+ensures forall i int :: {&s[lowI:high][i]} 0 <= i && i < len(s[lowI:high]) ==> &s[lowI:high][i] == &s[i+lowI]
 decreases
 pure
-func SubSliceOverlaps(s []byte, low, high int) bool {
+func SubSliceOverlaps(s []byte, lowI, high int) bool {
 	return true
 }
