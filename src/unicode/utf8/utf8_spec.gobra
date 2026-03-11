@@ -63,7 +63,7 @@ ensures 0 <= res && res < len(p)
 ensures len(p) > 0 ==> res > 0
 ensures res == len(Codepoints(sl.View(p)))
 ensures len(indices) == res
-ensures forall i int :: {i in indices} i in indices ==> 0 <= i && i < len(p)
+ensures forall i int :: {i elem indices} i elem indices ==> 0 <= i && i < len(p)
 trusted
 decreases
 func RuneCount(p []byte) (res int , ghost indices set[int])

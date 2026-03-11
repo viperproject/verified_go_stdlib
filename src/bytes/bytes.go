@@ -147,11 +147,11 @@ func Count(s, sep []byte) (res int) {
 	// @ invariant olds[idx:] === s
 	// @ invariant n >= 0
 	// @ invariant len(indices) == n
-	// @ invariant forall j int :: {j in indices} j in indices ==> j < idx
+	// @ invariant forall j int :: {j elem indices} j elem indices ==> j < idx
 	// @ invariant acc(sl.Bytes(olds, 0, len(olds)), R39)
 	// @ invariant acc(sl.Bytes(sep, 0, len(sep)), R39)
 	// @ invariant indices == SpecCountIndices(sl.View(olds)[:idx], sl.View(sep), 0)
-	// @ invariant idx == 0 || idx-len(sep) in indices
+	// @ invariant idx == 0 || idx-len(sep) elem indices
 	// @ decreases len(s)
 	for {
 		// @ ghost vs := sl.View(olds)
